@@ -1853,6 +1853,84 @@ namespace Piranha.Data.EF.SQLite.Migrations
                 {
                     b.Navigation("Fields");
                 });
+
+
+            modelBuilder.Entity("Piranha.Data.Workflow", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("Created")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Description")
+                    .HasMaxLength(512)
+                    .HasColumnType("TEXT");
+
+                b.Property<bool>("IsDefault")
+                    .HasColumnType("INTEGER");
+
+                b.Property<DateTime>("LastModified")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Title")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.ToTable("Piranha_Workflows");
+            });
+
+            modelBuilder.Entity("Piranha.Data.WorkflowStage", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Description")
+                    .HasMaxLength(512)
+                    .HasColumnType("TEXT");
+
+                b.Property<bool>("IsPublished")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("SortOrder")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Title")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .HasColumnType("TEXT");
+
+                b.Property<Guid>("WorkflowId")
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.HasIndex("WorkflowId");
+
+                b.ToTable("Piranha_WorkflowStages");
+            });
+
+            modelBuilder.Entity("Piranha.Data.WorkflowStage", b =>
+            {
+                b.HasOne("Piranha.Data.Workflow", "Workflow")
+                    .WithMany("Stages")
+                    .HasForeignKey("WorkflowId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("Workflow");
+            });
+
+            modelBuilder.Entity("Piranha.Data.Workflow", b =>
+            {
+                b.Navigation("Stages");
+            });
+
 #pragma warning restore 612, 618
         }
     }

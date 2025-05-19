@@ -64,7 +64,16 @@ public static class Menu
                 {
                     InternalId = "Aliases", Name = "Aliases", Route = "~/manager/aliases",
                     Policy = Permission.Aliases, Css = "fas fa-random"
-                }
+                },
+
+                new MenuItem
+                {
+                    InternalId = "Workflows",
+                    Name = "Workflows",
+                    Route = "~/manager/workflow",
+                    Policy = Permission.Admin,
+                    Css = "fas fa-sitemap"
+                },
             }
         },
         new MenuItem

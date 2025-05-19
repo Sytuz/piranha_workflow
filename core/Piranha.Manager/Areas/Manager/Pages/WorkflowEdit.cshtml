@@ -1,0 +1,23 @@
+@page "{id?}"
+@model Piranha.Manager.Areas.Manager.Pages.WorkflowEditModel
+@inject ManagerLocalizer Localizer
+@{
+    ViewBag.Title = Localizer.Workflow["Workflow"];
+    ViewBag.MenuItem = "Workflows";
+}
+
+<div id="workflow">
+    <workflow-edit></workflow-edit>
+</div>
+
+@section script
+{
+    <script type="text/javascript">
+        piranha.components.add("workflow", {
+            methods: {
+                bind: function (result) { }
+            },
+            updated: function () { }
+        });
+    </script>
+}

@@ -140,7 +140,10 @@ var js = [
             "node_modules/select2/dist/js/select2.js",
             "node_modules/vuejs-datepicker/dist/vuejs-datepicker.min.js",
             "node_modules/simplemde/dist/simplemde.min.js",
-            "node_modules/dompurify/dist/purify.min.js"
+            "node_modules/dompurify/dist/purify.min.js",
+
+            "assets/src/js/components/workflow/workflow-list.vue",
+            "assets/src/js/components/workflow/workflow-edit.vue"
         ]
     },
     {
@@ -287,6 +290,13 @@ var js = [
         items: [
             "node_modules/@aspnet/signalr/dist/browser/signalr.js"
 
+        ]
+    },
+
+    {
+        name: "piranha.workflow.js",
+        items: [
+            "assets/src/js/piranha.workflow.js"
         ]
     }
 ];

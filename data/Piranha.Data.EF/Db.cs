@@ -222,6 +222,16 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.Taxonomy> Taxonomies { get; set; }
 
     /// <summary>
+    /// Gets or sets the workflows.
+    /// </summary>
+    public DbSet<Data.Workflow> Workflows { get; set; }
+
+    /// <summary>
+    /// Gets or sets the workflow stages.
+    /// </summary>
+    public DbSet<Data.WorkflowStage> WorkflowStages { get; set; }
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="options">Configuration options</param>
@@ -454,6 +464,20 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
         mb.Entity<Data.Taxonomy>().Property(t => t.Title).IsRequired().HasMaxLength(64);
         mb.Entity<Data.Taxonomy>().Property(t => t.Slug).IsRequired().HasMaxLength(64);
         mb.Entity<Data.Taxonomy>().HasIndex(t => new { t.GroupId, t.Type, t.Slug }).IsUnique();
+
+        // Workflow configurations
+        mb.Entity<Data.Workflow>().ToTable("Piranha_Workflows");
+        mb.Entity<Data.Workflow>().Property(w => w.Title).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.Workflow>().Property(w => w.Description).HasMaxLength(512);
+
+        mb.Entity<Data.WorkflowStage>().ToTable("Piranha_WorkflowStages");
+        mb.Entity<Data.WorkflowStage>().Property(s => s.Title).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.WorkflowStage>().Property(s => s.Description).HasMaxLength(512);
+        mb.Entity<Data.WorkflowStage>()
+            .HasOne(s => s.Workflow)
+            .WithMany(w => w.Stages)
+            .HasForeignKey(s => s.WorkflowId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     /// <summary>
