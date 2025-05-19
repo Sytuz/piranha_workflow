@@ -8,7 +8,7 @@
 ## Context
 The scenario mentions the need to support the handoff of content *from creators to reviewers, legal teams, and final approvers, in custom tailored flows*, so our first plan was to implement a static workflow with a fixed number of stages, similar to what is shown in the image below:
 
-![image](StaticWorkflow.png)
+![image](../assets/StaticWorkflow.png)
 
 In this version, the workflow is defined in advance and does not allow for dynamic changes or custom flows. This approach is simple to implement but lacks flexibility and may not meet the needs of all teams.
 
