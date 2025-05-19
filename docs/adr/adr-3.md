@@ -19,6 +19,7 @@ We have decided to use a Kanban board for managing our development process. This
 - **Visualization**: A Kanban board provides a clear visual representation of the workflow, making it easy to see the status of tasks and identify bottlenecks.
 - **Flexibility**: Kanban allows for continuous flow and does not require time-boxed sprints, making it easier to adapt to changing priorities and requirements.
 - **Continuous Improvement**: Kanban encourages teams to continuously improve their processes and workflows, allowing for ongoing optimization and efficiency gains.
+- **Trade-off**: While using a Kanban board requires discipline in maintaining the board and ensuring that tasks are updated regularly, we believe that the benefits of visualization and flexibility outweigh the downsides. We will need to establish guidelines for maintaining the board and ensuring that tasks are updated regularly.
 
 ## Consequences
 - We will implement a Kanban board using GitHub Projects to manage our development process.
