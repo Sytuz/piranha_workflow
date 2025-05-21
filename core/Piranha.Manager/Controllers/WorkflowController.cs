@@ -8,16 +8,20 @@ namespace Piranha.Manager.Controllers
     [Authorize(Policy = Permission.Admin)]
     public class WorkflowController : Controller
     {
-        [Route("manager/workflow")]
+        [Route("manager/workflow/list")]
         public IActionResult List()
         {
-            return View("List");
+            return RedirectToPage("/WorkflowList", new { area = "Manager" });
         }
 
-        [Route("manager/workflow/edit/{id?}")]
+        [Route("manager/workflow/edit/{id:Guid?}")]
         public IActionResult Edit(Guid? id)
         {
-            return View("Edit");
+            if (id.HasValue)
+            {
+                return RedirectToPage("/WorkflowEdit", new { area = "Manager", id = id.Value });
+            }
+            return RedirectToPage("/WorkflowEdit", new { area = "Manager" });
         }
     }
 }

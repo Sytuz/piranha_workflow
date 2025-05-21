@@ -1,23 +1,76 @@
-@page
+@page "~/manager/workflow"
 @model Piranha.Manager.Areas.Manager.Pages.WorkflowListModel
 @inject ManagerLocalizer Localizer
 @{
     ViewBag.Title = Localizer.Workflow["Workflows"];
     ViewBag.MenuItem = "Workflows";
 }
-
-<div id="workflow">
-    <workflow-list></workflow-list>
-</div>
-
 @section script
 {
+    <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script src="~/manager/assets/js/piranha.workflow.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    
     <script type="text/javascript">
-        piranha.components.add("workflow", {
-            methods: {
-                bind: function (result) { }
-            },
-            updated: function () { }
+        piranha.permissions.load(function () {
+            piranha.workflow.load();
         });
     </script>
 }
+
+<div id="workflow">
+    <div class="top">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
+                <li class="breadcrumb-item active" aria-current="page">@Localizer.Menu["Workflows"]</li>
+            </ol>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="top-nav">
+                <button class="btn btn-primary btn-labeled" data-toggle="modal" data-target="#workflowModal">
+                    <i class="fas fa-plus"></i>@Localizer.Workflow["Add Workflow"]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid app" :class="{ ready: !loading }">
+        <div class="row">
+            <div class="col">
+                <table class="table table-borderless">
+                    <thead>
+                        <tr>
+                            <th>@Localizer.General["Title"]</th>
+                            <th>@Localizer.General["Description"]</th>
+                            <th>@Localizer.General["Created"]</th>
+                            <th>@Localizer.General["Last modified"]</th>
+                            <th class="actions one"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="workflow in items">
+                            <td>
+                                <a :href="piranha.baseUrl + 'manager/workflow/edit/' + workflow.id">{{ workflow.title }}</a>
+                            </td>
+                            <td>
+                                {{ workflow.description }}
+                            </td>
+                            <td>
+                                {{ workflow.created }}
+                            </td>
+                            <td>
+                                {{ workflow.lastModified }}
+                            </td>
+                            <td class="actions one">
+                                <a v-on:click.prevent="remove(workflow.id)" class="danger">
+                                    <span class="fas fa-trash"></span>
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
