@@ -41,8 +41,18 @@ namespace Piranha.Models
         public DateTime LastModified { get; set; }
 
         /// <summary>
+        /// Gets or sets if this workflow is enabled.
+        /// </summary>
+        public bool IsEnabled { get; set; }
+
+        /// <summary>
         /// Gets or sets the stages in this workflow.
         /// </summary>
         public IList<WorkflowStage> Stages { get; set; } = new List<WorkflowStage>();
+
+        /// <summary>
+        /// Gets or sets the workflow stage relations.
+        /// </summary>
+        public IList<WorkflowStageRelation> Relations { get; set; } = new List<WorkflowStageRelation>();
     }
 }

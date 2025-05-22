@@ -85,12 +85,14 @@ public static class PiranhaEFExtensions
         services.Add(new ServiceDescriptor(typeof(ISiteTypeRepository), typeof(SiteTypeRepository), scope));
 
         services.Add(new ServiceDescriptor(typeof(IWorkflowRepository), typeof(WorkflowRepository), scope));
-        services.Add(new ServiceDescriptor(typeof(IWorkflowService), typeof(WorkflowService), scope));
+        services.Add(new ServiceDescriptor(typeof(IWorkflowStageRepository), typeof(WorkflowStageRepository), scope));
+        services.Add(new ServiceDescriptor(typeof(IWorkflowStageRelationRepository), typeof(WorkflowStageRelationRepository), scope));
 
         // Register services
         services.Add(new ServiceDescriptor(typeof(IContentServiceFactory), typeof(ContentServiceFactory), ServiceLifetime.Singleton));
         services.Add(new ServiceDescriptor(typeof(IDb), typeof(T), scope));
 
+        // Return the service collection
         return services;
     }
 }

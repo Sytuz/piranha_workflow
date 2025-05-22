@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Piranha.Data
 {
     [Serializable]
-    public class WorkflowStage
+    public sealed class WorkflowStage
     {
         /// <summary>
         /// Gets or sets the unique id.
@@ -40,7 +40,13 @@ namespace Piranha.Data
         public bool IsPublished { get; set; }
 
         /// <summary>
-        /// Gets or sets the workflow.
+        /// Gets or sets the optional color for display.
+        /// </summary>
+        [StringLength(16)]
+        public string Color { get; set; }
+
+        /// <summary>
+        /// Gets or sets the workflow this stage belongs to.
         /// </summary>
         public Workflow Workflow { get; set; }
     }

@@ -232,6 +232,11 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.WorkflowStage> WorkflowStages { get; set; }
 
     /// <summary>
+    /// Gets or sets the workflow stage relations.
+    /// </summary>
+    public DbSet<Data.WorkflowStageRelation> WorkflowStageRelations { get; set; }
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="options">Configuration options</param>
@@ -477,6 +482,13 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
             .HasOne(s => s.Workflow)
             .WithMany(w => w.Stages)
             .HasForeignKey(s => s.WorkflowId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        mb.Entity<Data.WorkflowStageRelation>().ToTable("Piranha_WorkflowStageRelations");
+        mb.Entity<Data.WorkflowStageRelation>()
+            .HasOne(s => s.Workflow)
+            .WithMany(w => w.Relations)
+            .HasForeignKey(r => r.WorkflowId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 

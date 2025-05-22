@@ -1,10 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Piranha.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Piranha.Models;
-using Piranha.Repositories;
 
 namespace Piranha.Repositories
 {
@@ -21,177 +20,275 @@ namespace Piranha.Repositories
             _db = db;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Gets all available workflows.
+        /// </summary>
+        /// <returns>The available workflows</returns>
         public async Task<IEnumerable<Models.Workflow>> GetAllAsync()
         {
-            var result = new List<Models.Workflow>();
             var workflows = await _db.Workflows
-                .Include(w => w.Stages)
+                .AsNoTracking()
                 .OrderBy(w => w.Title)
-                .ToListAsync()
-                .ConfigureAwait(false);
+                .ToListAsync();
+
+            var models = new List<Models.Workflow>();
 
             foreach (var workflow in workflows)
             {
-                result.Add(Map(workflow));
+                var model = new Models.Workflow
+                {
+                    Id = workflow.Id,
+                    Title = workflow.Title,
+                    Description = workflow.Description,
+                    IsDefault = workflow.IsDefault,
+                    IsEnabled = workflow.IsEnabled,
+                    Created = workflow.Created,
+                    LastModified = workflow.LastModified
+                };
+
+                // Get stages
+                model.Stages = await _db.WorkflowStages
+                    .Where(s => s.WorkflowId == workflow.Id)
+                    .OrderBy(s => s.SortOrder)
+                    .Select(s => new Models.WorkflowStage
+                    {
+                        Id = s.Id,
+                        WorkflowId = s.WorkflowId,
+                        Title = s.Title,
+                        Description = s.Description,
+                        SortOrder = s.SortOrder,
+                        IsPublished = s.IsPublished,
+                        Color = s.Color
+                    })
+                    .ToListAsync();
+
+                // Get relations
+                model.Relations = await _db.WorkflowStageRelations
+                    .Where(r => r.WorkflowId == workflow.Id)
+                    .Select(r => new Models.WorkflowStageRelation
+                    {
+                        Id = r.Id,
+                        WorkflowId = r.WorkflowId,
+                        SourceStageId = r.SourceStageId.Value,
+                        TargetStageId = r.TargetStageId.Value
+                    })
+                    .ToListAsync();
+
+                models.Add(model);
             }
-            return result;
+            return models;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Gets the workflow with the specified id.
+        /// </summary>
+        /// <param name="id">The unique id</param>
+        /// <returns>The workflow</returns>
         public async Task<Models.Workflow> GetByIdAsync(Guid id)
         {
             var workflow = await _db.Workflows
-                .Include(w => w.Stages)
-                .FirstOrDefaultAsync(w => w.Id == id)
-                .ConfigureAwait(false);
+                .AsNoTracking()
+                .FirstOrDefaultAsync(w => w.Id == id);
 
             if (workflow != null)
-                return Map(workflow);
+            {
+                var model = new Models.Workflow
+                {
+                    Id = workflow.Id,
+                    Title = workflow.Title,
+                    Description = workflow.Description,
+                    IsDefault = workflow.IsDefault,
+                    IsEnabled = workflow.IsEnabled,
+                    Created = workflow.Created,
+                    LastModified = workflow.LastModified
+                };
+
+                // Get stages
+                model.Stages = await _db.WorkflowStages
+                    .Where(s => s.WorkflowId == id)
+                    .OrderBy(s => s.SortOrder)
+                    .Select(s => new Models.WorkflowStage
+                    {
+                        Id = s.Id,
+                        WorkflowId = s.WorkflowId,
+                        Title = s.Title,
+                        Description = s.Description,
+                        SortOrder = s.SortOrder,
+                        IsPublished = s.IsPublished,
+                        Color = s.Color
+                    })
+                    .ToListAsync();
+
+                // Get relations
+                model.Relations = await _db.WorkflowStageRelations
+                    .Where(r => r.WorkflowId == id)
+                    .Select(r => new Models.WorkflowStageRelation
+                    {
+                        Id = r.Id,
+                        WorkflowId = r.WorkflowId,
+                        SourceStageId = r.SourceStageId.Value,
+                        TargetStageId = r.TargetStageId.Value
+                    })
+                    .ToListAsync();
+
+                return model;
+            }
             return null;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Saves the given workflow.
+        /// </summary>
+        /// <param name="model">The workflow</param>
         public async Task SaveAsync(Models.Workflow model)
         {
-            var isNew = model.Id == Guid.Empty;
+            var workflow = await _db.Workflows
+                .FirstOrDefaultAsync(w => w.Id == model.Id);
 
-            // Create or update the workflow
-            Data.Workflow workflow;
-            if (isNew)
+            if (workflow == null)
             {
                 workflow = new Data.Workflow
                 {
-                    Id = Guid.NewGuid(),
+                    Id = model.Id != Guid.Empty ? model.Id : Guid.NewGuid(),
                     Created = DateTime.Now
                 };
-                model.Id = workflow.Id;
-                await _db.Workflows.AddAsync(workflow).ConfigureAwait(false);
-            }
-            else
-            {
-                workflow = await _db.Workflows
-                    .Include(w => w.Stages)
-                    .FirstOrDefaultAsync(w => w.Id == model.Id)
-                    .ConfigureAwait(false);
-
-                if (workflow == null)
-                    throw new ArgumentException($"Workflow with ID {model.Id} not found");
-
-                // Remove deleted stages
-                var removedStages = workflow.Stages
-                    .Where(s => !model.Stages.Any(ms => ms.Id == s.Id))
-                    .ToList();
-
-                foreach (var stage in removedStages)
-                {
-                    _db.WorkflowStages.Remove(stage);
-                }
+                await _db.Workflows.AddAsync(workflow);
             }
 
             workflow.Title = model.Title;
             workflow.Description = model.Description;
             workflow.IsDefault = model.IsDefault;
+            workflow.IsEnabled = model.IsEnabled;
             workflow.LastModified = DateTime.Now;
 
-            // Handle stages
+            await _db.SaveChangesAsync();
+
+            // Save stages
             foreach (var stage in model.Stages)
             {
-                var stageId = stage.Id == Guid.Empty ? Guid.NewGuid() : stage.Id;
-
-                var dbStage = workflow.Stages.FirstOrDefault(s => s.Id == stage.Id);
+                stage.WorkflowId = workflow.Id;
+                var dbStage = await _db.WorkflowStages
+                    .FirstOrDefaultAsync(s => s.Id == stage.Id);
 
                 if (dbStage == null)
                 {
                     dbStage = new Data.WorkflowStage
                     {
-                        Id = stageId,
+                        Id = stage.Id != Guid.Empty ? stage.Id : Guid.NewGuid(),
                         WorkflowId = workflow.Id
                     };
-                    workflow.Stages.Add(dbStage);
+                    await _db.WorkflowStages.AddAsync(dbStage);
                 }
 
                 dbStage.Title = stage.Title;
                 dbStage.Description = stage.Description;
                 dbStage.SortOrder = stage.SortOrder;
                 dbStage.IsPublished = stage.IsPublished;
+                dbStage.Color = stage.Color;
             }
 
-            await _db.SaveChangesAsync().ConfigureAwait(false);
+            // Delete removed stages
+            var oldStages = await _db.WorkflowStages
+                .Where(s => s.WorkflowId == workflow.Id)
+                .ToListAsync();
 
-            // If this is the default workflow, unset any other defaults
-            if (workflow.IsDefault)
+            foreach (var oldStage in oldStages)
             {
-                var otherDefaults = await _db.Workflows
-                    .Where(w => w.IsDefault && w.Id != workflow.Id)
-                    .ToListAsync()
-                    .ConfigureAwait(false);
-
-                if (otherDefaults.Any())
+                if (!model.Stages.Any(s => s.Id == oldStage.Id))
                 {
-                    foreach (var other in otherDefaults)
-                    {
-                        other.IsDefault = false;
-                    }
-                    await _db.SaveChangesAsync().ConfigureAwait(false);
+                    _db.WorkflowStages.Remove(oldStage);
                 }
             }
-        }
 
-        /// <inheritdoc />
-        public async Task DeleteAsync(Guid id)
-        {
-            var workflow = await _db.Workflows
-                .FirstOrDefaultAsync(w => w.Id == id)
-                .ConfigureAwait(false);
+            await _db.SaveChangesAsync();
 
-            if (workflow != null)
+            // Save relations
+            foreach (var relation in model.Relations)
             {
-                _db.Workflows.Remove(workflow);
-                await _db.SaveChangesAsync().ConfigureAwait(false);
-            }
-        }
+                relation.WorkflowId = workflow.Id;
+                var dbRelation = await _db.WorkflowStageRelations
+                    .FirstOrDefaultAsync(r => r.Id == relation.Id);
 
-        /// <inheritdoc />
-        public async Task<bool> IsUniqueTitleAsync(string title, Guid? id = null)
-        {
-            return !await _db.Workflows.AnyAsync(w =>
-                w.Title.ToLower() == title.ToLower() &&
-                (!id.HasValue || w.Id != id.Value))
-                .ConfigureAwait(false);
+                if (dbRelation == null)
+                {
+                    dbRelation = new Data.WorkflowStageRelation
+                    {
+                        Id = relation.Id != Guid.Empty ? relation.Id : Guid.NewGuid(),
+                        WorkflowId = workflow.Id
+                    };
+                    await _db.WorkflowStageRelations.AddAsync(dbRelation);
+                }
+
+                dbRelation.SourceStageId = relation.SourceStageId;
+                dbRelation.TargetStageId = relation.TargetStageId;
+            }
+
+            // Delete removed relations
+            var oldRelations = await _db.WorkflowStageRelations
+                .Where(r => r.WorkflowId == workflow.Id)
+                .ToListAsync();
+
+            foreach (var oldRelation in oldRelations)
+            {
+                if (!model.Relations.Any(r => r.Id == oldRelation.Id))
+                {
+                    _db.WorkflowStageRelations.Remove(oldRelation);
+                }
+            }
+
+            await _db.SaveChangesAsync();
         }
 
         /// <summary>
-        /// Maps a data entity to a model.
+        /// Deletes the workflow with the specified id.
         /// </summary>
-        /// <param name="workflow">The data entity</param>
-        /// <returns>The model</returns>
-        private Models.Workflow Map(Data.Workflow workflow)
+        /// <param name="id">The unique id</param>
+        public async Task DeleteAsync(Guid id)
         {
-            var model = new Models.Workflow
+            // Delete workflow stages
+            var stages = await _db.WorkflowStages
+                .Where(s => s.WorkflowId == id)
+                .ToListAsync();
+            
+            if (stages.Count > 0)
             {
-                Id = workflow.Id,
-                Title = workflow.Title,
-                Description = workflow.Description,
-                IsDefault = workflow.IsDefault,
-                Created = workflow.Created,
-                LastModified = workflow.LastModified
-            };
-
-            foreach (var stage in workflow.Stages.OrderBy(s => s.SortOrder))
-            {
-                model.Stages.Add(new Models.WorkflowStage
-                {
-                    Id = stage.Id,
-                    WorkflowId = stage.WorkflowId,
-                    Title = stage.Title,
-                    Description = stage.Description,
-                    SortOrder = stage.SortOrder,
-                    IsPublished = stage.IsPublished
-                });
+                _db.WorkflowStages.RemoveRange(stages);
             }
 
-            return model;
+            // Delete workflow stage relations
+            var relations = await _db.WorkflowStageRelations
+                .Where(r => r.WorkflowId == id)
+                .ToListAsync();
+            
+            if (relations.Count > 0)
+            {
+                _db.WorkflowStageRelations.RemoveRange(relations);
+            }
+
+            // Delete workflow
+            var workflow = await _db.Workflows
+                .FirstOrDefaultAsync(w => w.Id == id);
+            
+            if (workflow != null)
+            {
+                _db.Workflows.Remove(workflow);
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Checks if the given title is unique for the workflow.
+        /// </summary>
+        /// <param name="title">The title to check</param>
+        /// <param name="id">The optional workflow id</param>
+        /// <returns>If the title is unique</returns>
+        public async Task<bool> IsUniqueTitleAsync(string title, Guid? id = null)
+        {
+            return await _db.Workflows
+                .Where(w => w.Title == title)
+                .Where(w => id == null || w.Id != id.Value)
+                .CountAsync() == 0;
         }
     }
 }
