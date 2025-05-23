@@ -2,9 +2,9 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Piranha.Manager.Models;
 using Piranha.Models;
-using Piranha.Services;
+using Piranha.Manager.Models;
+using Piranha.Manager.Services;
 
 namespace Piranha.Manager.Controllers
 {
@@ -17,13 +17,13 @@ namespace Piranha.Manager.Controllers
     [ApiController]
     public class WorkflowApiController : Controller
     {
-        private readonly IWorkflowService _service;
+        private readonly WorkflowService _service;
 
         /// <summary>
         /// Default constructor.
         /// </summary>
         /// <param name="service">The workflow service</param>
-        public WorkflowApiController(IWorkflowService service)
+        public WorkflowApiController(WorkflowService service)
         {
             _service = service;
         }
@@ -36,7 +36,17 @@ namespace Piranha.Manager.Controllers
         [Route("list")]
         public async Task<IActionResult> GetList()
         {
-            return Ok(await _service.GetAllAsync());
+            try
+            {
+                return Ok(await _service.GetAllAsync());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error retrieving workflows: {ex.Message}"
+                });
+            }
         }
 
         /// <summary>

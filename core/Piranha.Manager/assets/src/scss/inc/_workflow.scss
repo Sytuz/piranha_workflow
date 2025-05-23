@@ -1,0 +1,43 @@
+.sortable-item {
+    display: flex;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #e2e2e2;
+    border-radius: 0.25rem;
+    
+    .actions-move {
+        display: flex;
+        flex-direction: column;
+        margin-right: 1rem;
+        
+        button {
+            margin-bottom: 0.25rem;
+            
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+    }
+    
+    .content {
+        flex: 1;
+    }
+    
+    .actions {
+        display: flex;
+        align-items: center;
+        margin-left: 1rem;
+    }
+}
+
+.empty-info {
+    text-align: center;
+    padding: 2rem 0;
+    color: #999;
+}
+
+.addbutton {
+    margin-top: 1rem;
+    text-align: center;
+}

@@ -31,12 +31,39 @@
                 <button class="btn btn-primary btn-labeled" data-toggle="modal" data-target="#workflowModal">
                     <i class="fas fa-plus"></i>@Localizer.Workflow["Add Workflow"]
                 </button>
+                <button v-if="loadingFailed" v-on:click.prevent="retry" class="btn btn-warning btn-labeled">
+                    <i class="fas fa-sync"></i>Retry
+                </button>
             </div>
         </div>
     </div>
 
     <div class="container-fluid app" :class="{ ready: !loading }">
-        <div class="row">
+        <!-- Loading indicator -->
+        <div class="spinner text-center" v-if="loading">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-2">Loading workflows...</p>
+        </div>
+        
+        <!-- Error state -->
+        <div class="alert alert-danger" v-if="loadingFailed">
+            <h5><i class="fas fa-exclamation-triangle"></i> Error loading workflows</h5>
+            <p>There was a problem connecting to the server. Please check your connection or try again later.</p>
+            <button v-on:click.prevent="retry" class="btn btn-warning">
+                <i class="fas fa-sync"></i> Retry
+            </button>
+        </div>
+        
+        <!-- Empty state -->
+        <div class="empty-info" v-if="!loading && !loadingFailed && items.length === 0">
+            <h5 class="mt-4">No workflows available</h5>
+            <p>Click the "Add Workflow" button to create your first workflow.</p>
+        </div>
+        
+        <!-- Workflow list -->
+        <div class="row" v-if="!loading && !loadingFailed && items.length > 0">
             <div class="col">
                 <table class="table table-borderless">
                     <thead>
