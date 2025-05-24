@@ -102,7 +102,10 @@ public class App : BaseTests
             new PostRepository(db, serviceFactory),
             new PostTypeRepository(db),
             new SiteRepository(db, serviceFactory),
-            new SiteTypeRepository(db)
+            new SiteTypeRepository(db),
+            new WorkflowRepository(db),
+            new WorkflowStageRepository(db),
+            new WorkflowStageRelationRepository(db)
         );
     }
 }

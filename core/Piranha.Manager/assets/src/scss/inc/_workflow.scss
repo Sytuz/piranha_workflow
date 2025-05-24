@@ -1,0 +1,268 @@
+@import "variables";
+
+// Workflow list styles
+.workflow-container {
+    height: calc(100vh - 150px); // Adjusted from 180px to 150px
+    margin-top: 1rem;
+}
+
+.workflow-sidebar {
+    border-right: 2px solid #e0e0e0;
+    padding-top: 1vh;
+    padding-right: 0; 
+    padding-left: 0; 
+    height: 100%;
+    overflow-y: auto;
+    background-color: $gray-100; 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.workflow-list {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; // Allow list to take available space
+    // overflow-y: auto; // If only list should scroll, not the whole sidebar. But sidebar scroll is usually fine.
+}
+
+.workflow-item {
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0; 
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-left-color 0.2s ease; 
+    display: flex;
+    align-items: flex-start; // Changed from align-items-center to align avatar and content to top
+    color: $body-color; 
+
+    &:last-child {
+        border-bottom: none; 
+    }
+}
+
+.workflow-item:hover {
+    background-color: $gray-200; 
+}
+
+.workflow-item.active {
+    background-color: rgba($blue, 0.1); 
+    border-left: 4px solid $blue; 
+    color: $blue; 
+
+    .workflow-title {
+        color: $blue; 
+    }
+    .workflow-excerpt, .workflow-date {
+        color: darken($blue, 10%); 
+    }
+}
+
+.workflow-item-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: $blue; 
+    position: relative; 
+    flex-shrink: 0; // Prevent avatar from shrinking
+}
+
+.workflow-status-icon {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    font-size: 0.8rem;
+    padding: 2px;
+    border-radius: 50%;
+    background-color: transparent; // Changed from $white to transparent
+
+    &.enabled {
+        color: $success;
+    }
+    &.disabled {
+        color: $danger;
+    }
+    &.default {
+        color: $warning; // Or $success, depending on preference for default star
+    }
+}
+
+// When item is active, ensure avatar icon color contrasts with new background or remains prominent
+.workflow-item.active .workflow-item-avatar {
+    color: $blue; 
+    background-color: rgba($blue, 0.2); 
+}
+
+
+.workflow-item-content {
+    flex: 1;
+    // No specific top padding needed here if workflow-item handles overall padding
+    // and align-items: flex-start is used.
+}
+
+.workflow-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; // Align items to the start of the flex container
+    margin-bottom: 0.25rem; // Add some space below the header
+}
+
+.workflow-title {
+    // margin-bottom: 0.25rem; // Removed margin-bottom as it's handled by workflow-item-header
+    font-size: 1.1rem;
+    font-weight: 600; 
+    margin-right: 0.5rem; // Add some space between title and date
+    line-height: 1.2; // Adjust line height for better alignment if title wraps
+    color: $headings-color; // Default title color
+}
+
+.workflow-excerpt {
+    color: $text-muted; // Use $text-muted for better theme consistency
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    line-height: 1.3;
+}
+
+.workflow-date {
+    color: $text-muted; // Use $text-muted
+    font-size: 0.8rem;
+    white-space: nowrap; // Prevent date from wrapping
+    margin-top: 0.15rem; // Fine-tune vertical alignment with title
+}
+
+.workflow-details {
+    padding: 1.5rem;
+    height: 100%;
+    overflow-y: auto;
+    background-color: $white; // Updated from $white !important, ensuring it's just $white
+    // box-shadow: -3px 0 10px rgba(0, 0, 0, 0.05); // Removed box-shadow as it was commented out in CSHTML
+    position: relative;
+    z-index: 1;
+}
+
+.workflow-placeholder {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: $gray-600; // Assumed #6c757d maps to $gray-600
+}
+
+.workflow-detail-content {
+    animation: fadeIn 0.3s ease;
+}
+
+.workflow-search {
+    padding: 1rem; // Add consistent padding
+    border-bottom: 1px solid #d1d1d1; // Slightly darker border for separation within the sidebar
+    background-color: $gray-100; // Match sidebar background or make slightly different if preferred
+    flex-shrink: 0; // Prevent search bar from shrinking
+}
+
+.workflow-search .form-control {
+    background-color: $white;
+    border-color: #ced4da; // Updated from $gray-300 to specific color (standard Bootstrap form border)
+}
+
+.workflow-search .form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15); // Standard Bootstrap focus shadow
+}
+
+.workflow-header {
+    border-bottom: 1px solid #f0f0f0; // Updated from $gray-300 to a lighter specific color
+}
+
+.workflow-description.card {
+    border-color: #f0f0f0; 
+}
+
+// Workflow Stages Graph Styles
+.workflow-stages-graph-container {
+    margin-top: 1.5rem;
+    border-color: #f0f0f0;
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    h5 {
+        font-weight: 600;
+        color: $gray-700;
+    }
+}
+
+.gojs-diagram-container {
+    width: 100%;
+    height: 400px; // Or set a dynamic height based on content / parent
+    border: 1px solid $gray-300;
+    background-color: $gray-100; // A light background for the diagram area
+}
+
+// Remove old SVG graph styles (if they were specific and not general .workflow-graph-* )
+/*
+.workflow-graph-area,
+.workflow-graph-svg,
+.workflow-graph-row,
+.workflow-graph-stage, // If this was the old stage box, GoJS styles it internally
+.workflow-graph-arrow { // If this was the old arrow
+    // Remove these or ensure they don't conflict
+}
+*/
+// The .workflow-graph-stage, .stage-title, .stage-description classes previously defined
+// for the HTML/SVG graph are no longer directly used by the GoJS rendering in the HTML.
+// GoJS node templates define their appearance.
+// If you had specific styles for .workflow-graph-stage that you want to replicate in GoJS,
+// you'd do that via GoJS properties (e.g., font, fill, stroke in the node template).
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.sortable-item {
+    display: flex;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #e2e2e2;
+    border-radius: 0.25rem;
+    
+    .actions-move {
+        display: flex;
+        flex-direction: column;
+        margin-right: 1rem;
+        
+        button {
+            margin-bottom: 0.25rem;
+            
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+    }
+    
+    .content {
+        flex: 1;
+    }
+    
+    .actions {
+        display: flex;
+        align-items: center;
+        margin-left: 1rem;
+    }
+}
+
+.empty-info {
+    text-align: center;
+    padding: 2rem 0;
+    color: #999;
+}
+
+.addbutton {
+    margin-top: 1rem;
+    text-align: center;
+}

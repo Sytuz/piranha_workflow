@@ -31,6 +31,10 @@ public class DbFactory : IDesignTimeDbContextFactory<SQLiteDb>
     {
         var builder = new DbContextOptionsBuilder<SQLiteDb>();
         builder.UseSqlite("Filename=./piranha.dev.db");
+
+        // Suppress the pending model changes warning
+        builder.ConfigureWarnings(warnings =>
+            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         return new SQLiteDb(builder.Options);
     }
 }

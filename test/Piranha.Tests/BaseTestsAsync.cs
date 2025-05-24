@@ -79,6 +79,9 @@ public abstract class BaseTestsAsync : IAsyncLifetime
             new PostTypeRepository(db),
             new SiteRepository(db, serviceFactory),
             new SiteTypeRepository(db),
+            new WorkflowRepository(db),
+            new WorkflowStageRepository(db),
+            new WorkflowStageRelationRepository(db),
             cache: _cache,
             storage: _storage,
             processor: _processor
