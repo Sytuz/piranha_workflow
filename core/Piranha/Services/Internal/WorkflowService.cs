@@ -1,13 +1,3 @@
-/*
- * Copyright (c) .NET Foundation and Contributors
- *
- * This software may be modified and distributed under the terms
- * of the MIT license. See the LICENSE file for details.
- *
- * https://github.com/piranhacms/piranha.core
- *
- */
-
 using System.ComponentModel.DataAnnotations;
 using Piranha.Models;
 using Piranha.Repositories;
@@ -88,26 +78,94 @@ public class WorkflowService : IWorkflowService
     /// <inheritdoc />
     public async Task DeleteAsync(Guid id)
     {
-        // Check if it's the only workflow before deleting
-        var workflows = await _repo.GetAllAsync();
-        if (workflows.Count() <= 1)
+        var workflowToDelete = await _repo.GetByIdAsync(id).ConfigureAwait(false);
+        if (workflowToDelete == null)
         {
-            throw new ValidationException("Cannot delete the only workflow in the system");
+            return; // Or throw not found
         }
-        
-        // Check if it's the default workflow
-        var workflow = await _repo.GetByIdAsync(id);
-        if (workflow != null && workflow.IsDefault)
+
+        var allWorkflows = (await _repo.GetAllAsync().ConfigureAwait(false)).ToList();
+
+        // Prevent deleting the last workflow
+        if (allWorkflows.Count <= 1)
         {
-            var otherWorkflow = workflows.FirstOrDefault(w => w.Id != id);
-            if (otherWorkflow != null)
+            throw new ValidationException("Cannot delete the only workflow in the system.");
+        }
+
+        // Prevent deleting the last enabled workflow
+        var enabledWorkflows = allWorkflows.Where(w => w.IsEnabled).ToList();
+        if (workflowToDelete.IsEnabled && enabledWorkflows.Count == 1 && enabledWorkflows[0].Id == id)
+        {
+            throw new ValidationException("Cannot delete the last enabled workflow. Please disable it first or enable another workflow.");
+        }
+
+        if (workflowToDelete.IsDefault)
+        {
+            // Find another enabled workflow to set as default
+            var nextDefault = allWorkflows.FirstOrDefault(w => w.Id != id && w.IsEnabled);
+            if (nextDefault != null)
             {
-                otherWorkflow.IsDefault = true;
-                await _repo.SaveAsync(otherWorkflow).ConfigureAwait(false);
+                nextDefault.IsDefault = true;
+                await _repo.SaveAsync(nextDefault).ConfigureAwait(false);
+            }
+            else
+            {
+                // This case should ideally be prevented by the "last enabled workflow" check if it was also default.
+                // If somehow reached, it means we are deleting the default and no other enabled workflow exists to take over.
+                // Depending on requirements, this could be an error or allowed.
+                // For now, the above check for last enabled workflow should cover this.
             }
         }
 
         await _repo.DeleteAsync(id).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task ToggleEnabledAsync(Guid id)
+    {
+        var workflow = await _repo.GetByIdAsync(id).ConfigureAwait(false);
+        if (workflow == null)
+        {
+            throw new KeyNotFoundException($"Workflow with id {id} not found.");
+        }
+
+        var wasEnabled = workflow.IsEnabled;
+        workflow.IsEnabled = !workflow.IsEnabled;
+        workflow.LastModified = DateTime.Now;
+
+        var allWorkflows = (await _repo.GetAllAsync().ConfigureAwait(false)).ToList();
+
+        if (workflow.IsEnabled) // Workflow is being enabled
+        {
+            // If no other workflow is default, make this one default
+            if (!allWorkflows.Any(w => w.Id != workflow.Id && w.IsDefault))
+            {
+                workflow.IsDefault = true;
+            }
+        }
+        else // Workflow is being disabled
+        {
+            if (workflow.IsDefault)
+            {
+                // This was the default workflow, try to set another enabled one as default
+                var nextDefault = allWorkflows.FirstOrDefault(w => w.Id != workflow.Id && w.IsEnabled);
+                if (nextDefault != null)
+                {
+                    nextDefault.IsDefault = true;
+                    await _repo.SaveAsync(nextDefault).ConfigureAwait(false);
+                }
+                else
+                {
+                    // This is the last enabled workflow and it was default. Prevent disabling.
+                    workflow.IsEnabled = true; // Revert
+                    workflow.LastModified = DateTime.Now; // Revert modification time or handle appropriately
+                    await _repo.SaveAsync(workflow).ConfigureAwait(false); // Save reverted state
+                    throw new ValidationException("Cannot disable the last enabled default workflow. Enable another workflow first to make it default.");
+                }
+                workflow.IsDefault = false; // No longer default as it's disabled
+            }
+        }
+        await _repo.SaveAsync(workflow).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -118,7 +176,6 @@ public class WorkflowService : IWorkflowService
             Id = Guid.NewGuid(),
             Title = title,
             Description = description,
-            IsEnabled = true,
             Created = DateTime.Now,
             LastModified = DateTime.Now
         };
@@ -128,6 +185,7 @@ public class WorkflowService : IWorkflowService
         if (!workflows.Any())
         {
             workflow.IsDefault = true;
+            workflow.IsEnabled = true; // Automatically enable the first workflow
         }
 
         // Add standard stages
@@ -155,9 +213,18 @@ public class WorkflowService : IWorkflowService
             {
                 Id = Guid.NewGuid(),
                 WorkflowId = workflow.Id,
+                Title = "Legal Review",
+                Description = "Content under legal review",
+                SortOrder = 3,
+                IsPublished = true
+            },
+            new WorkflowStage
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = workflow.Id,
                 Title = "Approved",
                 Description = "Content ready for publishing",
-                SortOrder = 3,
+                SortOrder = 4,
                 IsPublished = true
             }
         };
@@ -178,6 +245,20 @@ public class WorkflowService : IWorkflowService
                 WorkflowId = workflow.Id,
                 SourceStageId = workflow.Stages[1].Id,
                 TargetStageId = workflow.Stages[2].Id
+            },
+            new WorkflowStageRelation
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = workflow.Id,
+                SourceStageId = workflow.Stages[2].Id,
+                TargetStageId = workflow.Stages[3].Id
+            },
+            new WorkflowStageRelation
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = workflow.Id,
+                SourceStageId = workflow.Stages[1].Id,
+                TargetStageId = workflow.Stages[3].Id
             }
         };
 

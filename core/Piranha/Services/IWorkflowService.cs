@@ -34,6 +34,12 @@ namespace Piranha.Services
         Task DeleteAsync(Guid id);
 
         /// <summary>
+        /// Toggles the workflow enabled state.
+        /// </summary>
+        /// <param name="id">The unique id</param>
+        Task ToggleEnabledAsync(Guid id);
+
+        /// <summary>
         /// Creates a standard workflow with predefined stages.
         /// </summary>
         /// <param name="title">The workflow title</param>

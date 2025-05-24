@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Piranha.Models;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
+using System.ComponentModel.DataAnnotations; // Add this using directive
 
 namespace Piranha.Manager.Controllers
 {
@@ -99,13 +100,49 @@ namespace Piranha.Manager.Controllers
                 var workflow = await _service.CreateStandardWorkflowAsync(model.Title, model.Description);
                 return Ok(workflow);
             }
+            catch (ValidationException e)
+            {
+                var error = new ErrorMessage { Body = e.Message };
+                return BadRequest(error);
+            }
             catch (Exception e)
             {
                 var error = new ErrorMessage
                 {
                     Body = e.Message
                 };
+                return StatusCode(500, error);
+            }
+        }
+
+        /// <summary>
+        /// Toggles the enabled state of the workflow with the specified id.
+        /// </summary>
+        /// <param name="id">The workflow id</param>
+        /// <returns>The updated workflow</returns>
+        [HttpPost]
+        [Route("{id}/toggle-enabled")]
+        public async Task<IActionResult> ToggleEnabled(Guid id)
+        {
+            try
+            {
+                await _service.ToggleEnabledAsync(id);
+                return Ok(await _service.GetByIdAsync(id));
+            }
+            catch (ValidationException e)
+            {
+                var error = new ErrorMessage { Body = e.Message };
                 return BadRequest(error);
+            }
+            catch (KeyNotFoundException e)
+            {
+                var error = new ErrorMessage { Body = e.Message };
+                return NotFound(error);
+            }
+            catch (Exception e)
+            {
+                var error = new ErrorMessage { Body = e.Message };
+                return StatusCode(500, error);
             }
         }
 

@@ -1,5 +1,5 @@
 /*global
-    piranha, Vue, go
+    piranha, Vue, go, $
 */
 
 piranha.workflow = new Vue({
@@ -10,7 +10,9 @@ piranha.workflow = new Vue({
         loadingFailed: false,
         selectedWorkflow: null,
         searchTerm: "",
-        goJsDiagram: null // Holds the GoJS Diagram instance
+        goJsDiagram: null, // Holds the GoJS Diagram instance
+        newWorkflowTitle: "",
+        newWorkflowDescription: ""
     },
     computed: {
         filteredItems: function() {
@@ -43,13 +45,31 @@ piranha.workflow = new Vue({
         },
         initGoJsDiagram: function() {
             if (!this.$refs.goJsDiagramDiv) {
-                console.warn("GoJS init: goJsDiagramDiv not found in refs.");
-                return;
+                // The div for the diagram is not currently in the DOM (e.g., due to v-if).
+                // If a diagram instance exists, it's now orphaned. Clean it up.
+                if (this.goJsDiagram) {
+                    console.warn("GoJS init: Target div (goJsDiagramDiv) not found in refs, but a GoJS Diagram instance exists. Cleaning up old instance.");
+                    this.goJsDiagram.div = null; // Allow GoJS to release resources
+                    this.goJsDiagram = null;
+                }
+                return; // Cannot initialize without the div.
             }
 
-            if (this.goJsDiagram) { 
-                return; // Diagram already initialized
+            if (this.goJsDiagram) {
+                // A GoJS Diagram instance already exists.
+                // Check if it's still attached to the *current* DOM element referenced by goJsDiagramDiv.
+                if (this.goJsDiagram.div === this.$refs.goJsDiagramDiv) {
+                    // Already initialized and attached to the correct div. Nothing more to do for init.
+                    return;
+                } else {
+                    // The existing diagram instance is attached to an old, now-replaced DOM element.
+                    console.warn("GoJS init: GoJS Diagram instance exists but is attached to an old DOM element. Re-initializing on the new div.");
+                    this.goJsDiagram.div = null; // Clean up the old diagram's association
+                    this.goJsDiagram = null;     // Force re-creation of the diagram object
+                }
             }
+
+            // If we reach here, this.goJsDiagram is null, so we need to create a new instance.
 
             // Ensure GoJS is loaded
             if (typeof go === 'undefined') {
@@ -61,19 +81,18 @@ piranha.workflow = new Vue({
             if (this.$refs.goJsDiagramDiv.offsetHeight < 10) { 
                  console.warn("GoJS init (pre-create): goJsDiagramDiv has no significant height. Forcing height.", this.$refs.goJsDiagramDiv.offsetHeight);
                  this.$refs.goJsDiagramDiv.style.height = "400px";
-                 // Optional: force browser to recalculate layout.
-                 // void this.$refs.goJsDiagramDiv.offsetHeight; 
             }
 
             console.log("GoJS init: Initializing new Diagram instance. Div height now:", this.$refs.goJsDiagramDiv.offsetHeight);
-            const $ = go.GraphObject.make; 
+            const $go = go.GraphObject.make; // Renamed to avoid conflict with jQuery's $
 
-            this.goJsDiagram = $(go.Diagram, this.$refs.goJsDiagramDiv, {
+            this.goJsDiagram = $go(go.Diagram, this.$refs.goJsDiagramDiv, {
                 initialContentAlignment: go.Spot.Center,
-                layout: $(go.LayeredDigraphLayout, { 
-                    direction: 90, 
+                initialScale: 0.95, // Set initial zoom level
+                layout: $go(go.LayeredDigraphLayout, { 
+                    direction: 0, 
                     layerSpacing: 50,
-                    columnSpacing: 30
+                    columnSpacing: 30 
                 }),
                 "undoManager.isEnabled": false,
                 "animationManager.isEnabled": false,
@@ -85,29 +104,29 @@ piranha.workflow = new Vue({
 
             // Define the Node template
             this.goJsDiagram.nodeTemplate =
-                $(go.Node, "Auto",
+                $go(go.Node, "Auto",
                     { 
                         locationSpot: go.Spot.Center,
-                        fromSpot: go.Spot.BottomCenter, 
-                        toSpot: go.Spot.TopCenter,     
+                        fromSpot: go.Spot.RightCenter, 
+                        toSpot: go.Spot.LeftCenter,     
                         selectionObjectName: "PANEL",
-                        toolTip: $(go.Adornment, "Auto",
-                                   $(go.TextBlock, { margin: 4 }, new go.Binding("text", "description"))
+                        toolTip: $go(go.Adornment, "Auto",
+                                   $go(go.TextBlock, { margin: 4 }, new go.Binding("text", "description"))
                                  )
                     },
                     new go.Binding("layerName", "isPublished", function(is) { return is ? "Foreground" : ""; }),
-                    $(go.Shape, "RoundedRectangle",
+                    $go(go.Shape, "RoundedRectangle",
                         { fill: "white", stroke: "#BBB", strokeWidth: 1, portId: "" },
                         new go.Binding("fill", "isPublished", function(is) { return is ? "#E6FFED" : "#FFFFFF"; }),
                         new go.Binding("stroke", "isPublished", function(is) { return is ? "#4CAF50" : "#BBB"; }),
                         new go.Binding("strokeWidth", "isPublished", function(is) { return is ? 2 : 1; })
                     ),
-                    $(go.Panel, "Vertical", { margin: 10, defaultAlignment: go.Spot.Left },
-                        $(go.TextBlock,
+                    $go(go.Panel, "Vertical", { margin: 10, defaultAlignment: go.Spot.Left },
+                        $go(go.TextBlock,
                             { font: "bold 10pt sans-serif", stroke: "#333", margin: new go.Margin(0, 0, 4, 0) },
                             new go.Binding("text", "title")
                         ),
-                        $(go.TextBlock,
+                        $go(go.TextBlock,
                             { font: "9pt sans-serif", stroke: "#555", wrap: go.TextBlock.WrapDesiredSize, width: 130 },
                             new go.Binding("text", "description", function(d) { return piranha.workflow.truncateDescription(d, 50); })
                         )
@@ -116,7 +135,7 @@ piranha.workflow = new Vue({
 
             // Define the Link template
             this.goJsDiagram.linkTemplate =
-                $(go.Link,
+                $go(go.Link,
                     { 
                         routing: go.Link.AvoidsNodes, 
                         corner: 10, 
@@ -127,27 +146,16 @@ piranha.workflow = new Vue({
                         relinkableTo: false,
                         selectionAdorned: false 
                     },
-                    $(go.Shape, { strokeWidth: 2, stroke: "#555" }),
-                    $(go.Shape, { toArrow: "Standard", fill: "#555", stroke: null, scale: 1.5 })
+                    $go(go.Shape, { strokeWidth: 2, stroke: "#555" }),
+                    $go(go.Shape, { toArrow: "Standard", fill: "#555", stroke: null, scale: 1.5 })
                 );
-            
         },
         updateGoJsModel: function() {
             if (!this.goJsDiagram) {
-                // It's possible this gets called before initGoJsDiagram if the $nextTick order is tricky
-                // or if initGoJsDiagram returned early.
-                // Attempt to initialize if the div exists and conditions are met.
-                if (this.selectedWorkflow && this.selectedWorkflow.stages && this.selectedWorkflow.stages.length > 0 && this.$refs.goJsDiagramDiv) {
-                    console.warn("GoJS updateGoJsModel: Diagram not initialized, attempting init now.");
-                    this.initGoJsDiagram(); // Try to init
-                    if (!this.goJsDiagram) { // If init still failed (e.g. GoJS lib not loaded)
-                        console.error("GoJS updateGoJsModel: Failed to initialize diagram on retry.");
-                        return;
-                    }
-                } else {
-                    console.warn("GoJS updateGoJsModel: Diagram not initialized and conditions for init not met.");
-                    return;
-                }
+                // This should ideally not be hit if initGoJsDiagram is called correctly before updateGoJsModel.
+                // initGoJsDiagram is responsible for ensuring a valid diagram instance if the div exists.
+                console.error("GoJS updateGoJsModel: Diagram instance is not available. initGoJsDiagram might have failed or was not called when the div was ready.");
+                return;
             }
 
             if (!this.selectedWorkflow || !this.selectedWorkflow.stages || this.selectedWorkflow.stages.length === 0) {
@@ -169,11 +177,9 @@ piranha.workflow = new Vue({
                 to: rel.targetStageId
             }));
 
-            console.log("GoJS updateGoJsModel: Nodes:", nodeDataArray.length, "Links:", linkDataArray.length);
+            console.log("GoJS updateGoJsModel: Nodes:", nodeDataArray.length, "Links:", linkDataArray.length, "for workflow:", this.selectedWorkflow.id, "Enabled:", this.selectedWorkflow.isEnabled);
 
             this.goJsDiagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
-            
-            // Crucial: Tell GoJS to re-evaluate its div and layout.
             this.goJsDiagram.requestUpdate();
         },
         load: function() {
@@ -236,6 +242,120 @@ piranha.workflow = new Vue({
         },
         retry: function() {
             this.load(); 
+        },
+        toggleEnabled: function(workflow) {
+            var self = this;
+            var action = workflow.isEnabled ? "Disable" : "Enable";
+            var message = action + " Workflow";
+            var confirmMessage = "Are you sure you want to " + action.toLowerCase() + " the workflow '" + workflow.title + "'?";
+            if (!workflow.isEnabled && !self.items.some(w => w.isDefault)) {
+                 confirmMessage += " This will also set it as the default workflow as no other default is set.";
+            } else if (workflow.isEnabled && workflow.isDefault && self.items.filter(w => w.isEnabled && w.id !== workflow.id).length === 0) {
+                piranha.notifications.push({ body: "Cannot disable the last enabled default workflow.", type: "warning", hide: true });
+                return;
+            }
+
+
+            piranha.alert.confirmThis(message, confirmMessage, function () {
+                fetch(piranha.baseUrl + "manager/api/workflow/" + workflow.id + "/toggle-enabled", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    }
+                })
+                .then(function (response) {
+                    if (!response.ok) {
+                        return response.json().then(function(err) { throw err; });
+                    }
+                    return response.json(); // Expecting the updated workflow
+                })
+                .then(function (updatedWorkflow) {
+                    piranha.notifications.push({ body: "Workflow '" + updatedWorkflow.title + "' has been " + (updatedWorkflow.isEnabled ? "enabled" : "disabled") + ".", type: "success", hide: true });
+                    // Reload all workflows to reflect potential changes in IsDefault status of other workflows
+                    self.load().then(() => {
+                        // Reselect the current workflow if it's still in the list
+                        const reselected = self.items.find(item => item.id === updatedWorkflow.id);
+                        if (reselected) {
+                            self.selectWorkflow(reselected);
+                        } else if (self.filteredItems.length > 0) {
+                            self.selectWorkflow(self.filteredItems[0]);
+                        } else {
+                            self.selectedWorkflow = null;
+                            self.updateGoJsModel(); // Clear diagram
+                        }
+                    });
+                })
+                .catch(function (error) {
+                    console.error("Error toggling workflow enabled state:", error);
+                    piranha.notifications.push({ body: error.body || "Failed to " + action.toLowerCase() + " workflow.", type: "danger", hide: true });
+                });
+            });
+        },
+        createWorkflow: function () {
+            var self = this;
+
+            if (!self.newWorkflowTitle.trim()) {
+                piranha.notifications.push({
+                    body: "Title is required for the new workflow.",
+                    type: "danger",
+                    hide: true
+                });
+                return;
+            }
+
+            var model = {
+                title: self.newWorkflowTitle,
+                description: self.newWorkflowDescription
+            };
+
+            fetch(piranha.baseUrl + "manager/api/workflow/create-standard", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    // Include AntiForgeryToken if your setup requires it for POSTs
+                    // "RequestVerificationToken": анти forgery token value
+                },
+                body: JSON.stringify(model)
+            })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function(err) { throw err; });
+                }
+                return response.json();
+            })
+            .then(function (newWorkflow) {
+                piranha.notifications.push({
+                    body: "Workflow '" + newWorkflow.title + "' created successfully.",
+                    type: "success",
+                    hide: true
+                });
+                // Reset form fields
+                self.newWorkflowTitle = "";
+                self.newWorkflowDescription = "";
+
+                // Hide modal (jQuery needed if Bootstrap's JS is used for modals)
+                if (typeof $ !== 'undefined' && $('#workflowModal').modal) {
+                    $('#workflowModal').modal('hide');
+                }
+
+
+                // Refresh the list and select the new workflow
+                self.load().then(function() {
+                    // Find and select the newly created workflow
+                    var created = self.items.find(function(item) { return item.id === newWorkflow.id; });
+                    if (created) {
+                        self.selectWorkflow(created);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.error("Error creating workflow:", error);
+                piranha.notifications.push({
+                    body: error.body || "Failed to create workflow. Please try again.",
+                    type: "danger",
+                    hide: true
+                });
+            });
         },
         remove: function(id) {
             var self = this;

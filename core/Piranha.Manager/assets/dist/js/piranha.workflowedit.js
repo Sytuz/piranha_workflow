@@ -9,7 +9,7 @@ piranha.workflowedit = new Vue({
         id: null,
         title: "",
         description: "",
-        stages: [],
+        stages: [], // Stages will have { id, title, description }
         saveUrl: piranha.baseUrl + "manager/api/workflow/save",
         originalTitle: null
     },
@@ -19,7 +19,8 @@ piranha.workflowedit = new Vue({
             this.title = result.title;
             this.originalTitle = result.title;
             this.description = result.description;
-            this.stages = result.stages || [];
+            // Assuming result.stages from API already has 'title' and 'description'
+            this.stages = result.stages || []; 
             
             this.loading = false;
         },
@@ -61,19 +62,19 @@ piranha.workflowedit = new Vue({
             // Add default stages for a new workflow
             this.stages.push({
                 id: piranha.utils.generateId(),
-                name: "Draft",
+                title: "Draft", // Changed from name to title
                 description: "Initial draft stage"
             });
             
             this.stages.push({
                 id: piranha.utils.generateId(),
-                name: "Review",
+                title: "Review", // Changed from name to title
                 description: "Content review stage"
             });
             
             this.stages.push({
                 id: piranha.utils.generateId(),
-                name: "Published",
+                title: "Published", // Changed from name to title
                 description: "Final published stage"
             });
             
@@ -101,11 +102,11 @@ piranha.workflowedit = new Vue({
                 return;
             }
             
-            // Make sure all stages have names
+            // Make sure all stages have titles
             for (var i = 0; i < self.stages.length; i++) {
-                if (!self.stages[i].name) {
+                if (!self.stages[i].title) { // Changed from name to title
                     piranha.notifications.push({
-                        body: "Please enter a name for all stages",
+                        body: "Please enter a title for all stages", // Changed from name to title
                         type: "danger",
                         hide: true
                     });
@@ -119,7 +120,7 @@ piranha.workflowedit = new Vue({
                 id: self.id,
                 title: self.title,
                 description: self.description,
-                stages: self.stages
+                stages: self.stages // Ensure stages sent to API have 'title'
             };
             
             fetch(self.saveUrl, {
@@ -170,7 +171,7 @@ piranha.workflowedit = new Vue({
         addStage: function () {
             this.stages.push({
                 id: piranha.utils.generateId(),
-                name: "",
+                title: "", // Changed from name to title
                 description: ""
             });
         },

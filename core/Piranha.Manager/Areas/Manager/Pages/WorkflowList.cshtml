@@ -66,10 +66,13 @@
                 <div class="workflow-list">
                     <div v-for="workflow in filteredItems" 
                          class="workflow-item" 
-                         :class="{ 'active': selectedWorkflow && selectedWorkflow.id === workflow.id }"
+                         :class="{ 'active': selectedWorkflow && selectedWorkflow.id === workflow.id, 'workflow-item-enabled': workflow.isEnabled }"
                          v-on:click="selectWorkflow(workflow)">
                         <div class="workflow-item-avatar">
                             <i class="fas fa-project-diagram"></i>
+                            <i v-if="workflow.isEnabled && workflow.isDefault" class="fas fa-star workflow-status-icon default" title="Default Enabled Workflow"></i>
+                            <i v-else-if="workflow.isEnabled" class="fas fa-check workflow-status-icon enabled" title="Enabled Workflow"></i>
+                            <i v-else class="fas fa-pause workflow-status-icon disabled" title="Disabled Workflow"></i>
                         </div>
                         <div class="workflow-item-content">
                             <div class="workflow-item-header">
@@ -86,12 +89,23 @@
             <div class="col-md-8 workflow-details">
                 <div v-if="selectedWorkflow" class="workflow-detail-content">
                     <div class="workflow-header">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h3>{{ selectedWorkflow.title }}</h3>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="mb-0 d-flex align-items-bottom">
+                                <span v-if="selectedWorkflow.isEnabled && selectedWorkflow.isDefault" class="badge badge-success workflow-title-badge mr-2" title="Default Enabled Workflow"><i class="fas fa-star"></i> Default</span>
+                                <span v-else-if="selectedWorkflow.isEnabled" class="badge badge-success workflow-title-badge mr-2" title="Enabled Workflow"><i class="fas fa-check-circle"></i> Enabled</span>
+                                <span v-else class="badge badge-secondary workflow-title-badge mr-2" title="Disabled Workflow"><i class="fas fa-times-circle"></i> Disabled</span>
+                                {{ selectedWorkflow.title }}
+                            </h3>
                             <div class="workflow-actions">
                                 <a :href="piranha.baseUrl + 'manager/workflow/edit/' + selectedWorkflow.id" class="btn btn-sm btn-primary mr-2">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
+                                <button v-if="selectedWorkflow.isEnabled" v-on:click.prevent="toggleEnabled(selectedWorkflow)" class="btn btn-sm btn-warning mr-2 text-white">
+                                    <i class="fas fa-ban"></i> Disable
+                                </button>
+                                <button v-else v-on:click.prevent="toggleEnabled(selectedWorkflow)" class="btn btn-sm btn-success mr-2">
+                                    <i class="fas fa-check-circle"></i> Enable
+                                </button>
                                 <a v-on:click.prevent="remove(selectedWorkflow.id)" class="btn btn-sm btn-danger text-white">
                                     <i class="fas fa-trash"></i> Delete
                                 </a>
@@ -127,6 +141,34 @@
                     <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
                     <h4>Select a workflow</h4>
                     <p class="text-muted">Choose a workflow from the list to view its details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Workflow Modal -->
+    <div class="modal fade" id="workflowModal" tabindex="-1" role="dialog" aria-labelledby="workflowModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="workflowModalLabel">@Localizer.Workflow["Add New Workflow"]</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="newWorkflowTitle">@Localizer.Workflow["Title"]</label>
+                        <input type="text" class="form-control" id="newWorkflowTitle" v-model="newWorkflowTitle" placeholder="@Localizer.Workflow["Enter workflow title"]">
+                    </div>
+                    <div class="form-group">
+                        <label for="newWorkflowDescription">@Localizer.General["Description"]</label>
+                        <textarea class="form-control" id="newWorkflowDescription" v-model="newWorkflowDescription" rows="3" placeholder="@Localizer.Workflow["Enter optional description"]"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer.General["Close"]</button>
+                    <button type="button" class="btn btn-primary" v-on:click.prevent="createWorkflow">@Localizer.Workflow["Create Workflow"]</button>
                 </div>
             </div>
         </div>

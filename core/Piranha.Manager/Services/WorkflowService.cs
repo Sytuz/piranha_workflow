@@ -64,6 +64,15 @@ public class WorkflowService
     }
 
     /// <summary>
+    /// Toggles the workflow enabled state.
+    /// </summary>
+    /// <param name="id">The unique id</param>
+    public async Task ToggleEnabledAsync(Guid id)
+    {
+        await _api.Workflows.ToggleEnabledAsync(id);
+    }
+
+    /// <summary>
     /// Checks if the given title is unique.
     /// </summary>
     /// <param name="title">The title</param>
