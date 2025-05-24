@@ -124,7 +124,8 @@ var js = [
             "node_modules/select2/dist/js/select2.js",
             "node_modules/vuejs-datepicker/dist/vuejs-datepicker.min.js",
             "node_modules/simplemde/dist/simplemde.min.js",
-            "node_modules/dompurify/dist/purify.min.js"
+            "node_modules/dompurify/dist/purify.min.js",
+            "node_modules/gojs/release/go.js"
         ]
     },
     {
@@ -141,7 +142,7 @@ var js = [
             "node_modules/vuejs-datepicker/dist/vuejs-datepicker.min.js",
             "node_modules/simplemde/dist/simplemde.min.js",
             "node_modules/dompurify/dist/purify.min.js",
-
+            "node_modules/gojs/release/go.js",
             "assets/src/js/components/workflow/workflow-list.vue",
             "assets/src/js/components/workflow/workflow-edit.vue"
         ]

@@ -9,12 +9,6 @@
 {
     <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
     <script src="~/manager/assets/js/piranha.workflow.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
-    
-    <script type="text/javascript">
-        piranha.permissions.load(function () {
-            piranha.workflow.load();
-        });
-    </script>
 }
 
 <div id="workflow">
@@ -62,41 +56,78 @@
             <p>Click the "Add Workflow" button to create your first workflow.</p>
         </div>
         
-        <!-- Workflow list -->
-        <div class="row" v-if="!loading && !loadingFailed && items.length > 0">
-            <div class="col">
-                <table class="table table-borderless">
-                    <thead>
-                        <tr>
-                            <th>@Localizer.General["Title"]</th>
-                            <th>@Localizer.General["Description"]</th>
-                            <th>@Localizer.General["Created"]</th>
-                            <th>@Localizer.General["Last modified"]</th>
-                            <th class="actions one"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="workflow in items">
-                            <td>
-                                <a :href="piranha.baseUrl + 'manager/workflow/edit/' + workflow.id">{{ workflow.title }}</a>
-                            </td>
-                            <td>
-                                {{ workflow.description }}
-                            </td>
-                            <td>
-                                {{ workflow.created }}
-                            </td>
-                            <td>
-                                {{ workflow.lastModified }}
-                            </td>
-                            <td class="actions one">
-                                <a v-on:click.prevent="remove(workflow.id)" class="danger">
-                                    <span class="fas fa-trash"></span>
+        <!-- Two-column layout -->
+        <div class="row workflow-container" v-if="!loading && !loadingFailed && items.length > 0">
+            <!-- Left sidebar with workflow list -->
+            <div class="col-md-4 workflow-sidebar">
+                <div class="workflow-search"> <!-- Removed mb-3 -->
+                    <input type="text" class="form-control" placeholder="Search workflows..." v-model="searchTerm">
+                </div>
+                <div class="workflow-list">
+                    <div v-for="workflow in filteredItems" 
+                         class="workflow-item" 
+                         :class="{ 'active': selectedWorkflow && selectedWorkflow.id === workflow.id }"
+                         v-on:click="selectWorkflow(workflow)">
+                        <div class="workflow-item-avatar">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div class="workflow-item-content">
+                            <div class="workflow-item-header">
+                                <h5 class="workflow-title">{{ workflow.title }}</h5>
+                                <small class="workflow-date">{{ formatDate(workflow.lastModified) }}</small>
+                            </div>
+                            <p class="workflow-excerpt">{{ truncateDescription(workflow.description, 60) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right panel with workflow details -->
+            <div class="col-md-8 workflow-details">
+                <div v-if="selectedWorkflow" class="workflow-detail-content">
+                    <div class="workflow-header">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3>{{ selectedWorkflow.title }}</h3>
+                            <div class="workflow-actions">
+                                <a :href="piranha.baseUrl + 'manager/workflow/edit/' + selectedWorkflow.id" class="btn btn-sm btn-primary mr-2">
+                                    <i class="fas fa-edit"></i> Edit
                                 </a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                <a v-on:click.prevent="remove(selectedWorkflow.id)" class="btn btn-sm btn-danger text-white">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-metadata mb-4">
+                        <span class="badge badge-info mr-2">Created: {{ formatDate(selectedWorkflow.created) }}</span>
+                        <span class="badge badge-secondary">Modified: {{ formatDate(selectedWorkflow.lastModified) }}</span>
+                    </div>
+                    
+                    <div class="workflow-description card mb-4">
+                        <div class="card-body">
+                            <h5>Description</h5>
+                            <p>{{ selectedWorkflow.description || 'No description available.' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Workflow Stages Graph (GoJS) -->
+                    <div v-if="selectedWorkflow && selectedWorkflow.stages && selectedWorkflow.stages.length > 0" class="workflow-stages-graph-container card">
+                        <div class="card-body">
+                            <h5 class="mb-3">Workflow Stages</h5>
+                            <div ref="goJsDiagramDiv" class="gojs-diagram-container">
+                                <!-- GoJS Diagram will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Placeholder when no workflow is selected -->
+                <div v-else class="workflow-placeholder text-center">
+                    <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
+                    <h4>Select a workflow</h4>
+                    <p class="text-muted">Choose a workflow from the list to view its details</p>
+                </div>
             </div>
         </div>
     </div>
