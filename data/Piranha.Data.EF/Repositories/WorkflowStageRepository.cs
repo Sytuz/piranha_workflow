@@ -37,6 +37,7 @@ namespace Piranha.Repositories
         public async Task<IEnumerable<Models.WorkflowStage>> GetAll()
         {
             return await _db.WorkflowStages
+                .Include(s => s.Roles)
                 .OrderBy(s => s.SortOrder)
                 .Select(s => new Models.WorkflowStage
                 {
@@ -46,7 +47,13 @@ namespace Piranha.Repositories
                     Description = s.Description,
                     SortOrder = s.SortOrder,
                     IsPublished = s.IsPublished,
-                    Color = s.Color
+                    Color = s.Color,
+                    Roles = s.Roles.Select(r => new Models.WorkflowStageRole
+                    {
+                        Id = r.Id,
+                        WorkflowStageId = r.WorkflowStageId,
+                        RoleId = r.RoleId
+                    }).ToList()
                 })
                 .ToListAsync();
         }
@@ -59,6 +66,7 @@ namespace Piranha.Repositories
         public async Task<Models.WorkflowStage> GetById(Guid id)
         {
             var stage = await _db.WorkflowStages
+                .Include(s => s.Roles)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (stage != null)
@@ -71,7 +79,13 @@ namespace Piranha.Repositories
                     Description = stage.Description,
                     SortOrder = stage.SortOrder,
                     IsPublished = stage.IsPublished,
-                    Color = stage.Color
+                    Color = stage.Color,
+                    Roles = stage.Roles.Select(r => new Models.WorkflowStageRole
+                    {
+                        Id = r.Id,
+                        WorkflowStageId = r.WorkflowStageId,
+                        RoleId = r.RoleId
+                    }).ToList()
                 };
             }
             return null;
@@ -85,6 +99,7 @@ namespace Piranha.Repositories
         public async Task<IEnumerable<Models.WorkflowStage>> GetByWorkflowId(Guid workflowId)
         {
             return await _db.WorkflowStages
+                .Include(s => s.Roles)
                 .Where(s => s.WorkflowId == workflowId)
                 .OrderBy(s => s.SortOrder)
                 .Select(s => new Models.WorkflowStage
@@ -95,7 +110,13 @@ namespace Piranha.Repositories
                     Description = s.Description,
                     SortOrder = s.SortOrder,
                     IsPublished = s.IsPublished,
-                    Color = s.Color
+                    Color = s.Color,
+                    Roles = s.Roles.Select(r => new Models.WorkflowStageRole
+                    {
+                        Id = r.Id,
+                        WorkflowStageId = r.WorkflowStageId,
+                        RoleId = r.RoleId
+                    }).ToList()
                 })
                 .ToListAsync();
         }
@@ -107,6 +128,7 @@ namespace Piranha.Repositories
         public async Task Save(Models.WorkflowStage stage)
         {
             var dbStage = await _db.WorkflowStages
+                .Include(s => s.Roles)
                 .FirstOrDefaultAsync(s => s.Id == stage.Id);
 
             if (dbStage == null)
@@ -124,6 +146,31 @@ namespace Piranha.Repositories
             dbStage.SortOrder = stage.SortOrder;
             dbStage.IsPublished = stage.IsPublished;
             dbStage.Color = stage.Color;
+
+            // Handle roles - remove existing and add new ones if provided
+            if (stage.Roles != null)
+            {
+                // Remove existing roles
+                var existingRoles = dbStage.Roles.ToList();
+                foreach (var existingRole in existingRoles)
+                {
+                    _db.WorkflowStageRoles.Remove(existingRole);
+                }
+
+                // Add new roles
+                foreach (var role in stage.Roles)
+                {
+                    var dbRole = new Data.WorkflowStageRole
+                    {
+                        Id = role.Id != Guid.Empty ? role.Id : Guid.NewGuid(),
+                        WorkflowStageId = dbStage.Id,
+                        RoleId = role.RoleId,
+                        Created = DateTime.Now,
+                        LastModified = DateTime.Now
+                    };
+                    dbStage.Roles.Add(dbRole);
+                }
+            }
 
             await _db.SaveChangesAsync();
         }

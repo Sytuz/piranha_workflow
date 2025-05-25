@@ -40,4 +40,9 @@ public class WorkflowStage
     /// Gets or sets the color used to represent this stage in the UI.
     /// </summary>
     public string Color { get; set; }
+
+    /// <summary>
+    /// Gets or sets the roles that can perform transitions from this stage.
+    /// </summary>
+    public IList<WorkflowStageRole> Roles { get; set; } = new List<WorkflowStageRole>();
 }

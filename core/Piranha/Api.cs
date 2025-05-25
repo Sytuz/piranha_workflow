@@ -111,6 +111,11 @@ public sealed class Api : IApi, IDisposable
     public IWorkflowStageRelationService WorkflowStageRelations { get; }
 
     /// <summary>
+    /// Gets the workflow stage roles repository.
+    /// </summary>
+    public IWorkflowStageRoleRepository WorkflowStageRoles { get; }
+
+    /// <summary>
     /// Gets if the current repository has caching enabled or not.
     /// </summary>
     public bool IsCached => _cache != null;
@@ -134,10 +139,10 @@ public sealed class Api : IApi, IDisposable
         IPostRepository postRepository,
         IPostTypeRepository postTypeRepository,
         ISiteRepository siteRepository,
-        ISiteTypeRepository siteTypeRepository,
-        IWorkflowRepository workflowRepository,
+        ISiteTypeRepository siteTypeRepository,        IWorkflowRepository workflowRepository,
         IWorkflowStageRepository workflowStageRepository,
         IWorkflowStageRelationRepository workflowStageRelationRepository,
+        IWorkflowStageRoleRepository workflowStageRoleRepository,
         ICache cache = null,
         IStorage storage = null,
         IImageProcessor processor = null,
@@ -154,11 +159,11 @@ public sealed class Api : IApi, IDisposable
         Params = new ParamService(paramRepository, cache);
         PostTypes = new PostTypeService(postTypeRepository, cache);
         SiteTypes = new SiteTypeService(siteTypeRepository, cache);
-        
-        // Create workflow services
+          // Create workflow services
         Workflows = new WorkflowService(workflowRepository);
-        WorkflowStages = new WorkflowStageService(workflowStageRepository);
+        WorkflowStages = new WorkflowStageService(workflowStageRepository, workflowStageRoleRepository);
         WorkflowStageRelations = new WorkflowStageRelationService(workflowStageRelationRepository);
+        WorkflowStageRoles = workflowStageRoleRepository;
 
         // Create services with dependencies
         Content = new ContentService(contentRepository, contentFactory, Languages, cache, search);

@@ -237,6 +237,11 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.WorkflowStageRelation> WorkflowStageRelations { get; set; }
 
     /// <summary>
+    /// Gets or sets the workflow stage roles.
+    /// </summary>
+    public DbSet<Data.WorkflowStageRole> WorkflowStageRoles { get; set; }
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="options">Configuration options</param>
@@ -490,6 +495,14 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
             .WithMany(w => w.Relations)
             .HasForeignKey(r => r.WorkflowId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        mb.Entity<Data.WorkflowStageRole>().ToTable("Piranha_WorkflowStageRoles");
+        mb.Entity<Data.WorkflowStageRole>()
+            .HasOne(sr => sr.WorkflowStage)
+            .WithMany(s => s.Roles)
+            .HasForeignKey(sr => sr.WorkflowStageId)
+            .OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<Data.WorkflowStageRole>().Property(sr => sr.RoleId).HasMaxLength(450).IsRequired();
     }
 
     /// <summary>

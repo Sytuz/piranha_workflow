@@ -8,6 +8,7 @@
  *
  */
 
+using Piranha.Repositories;
 using Piranha.Services;
 
 namespace Piranha;
@@ -101,4 +102,9 @@ public interface IApi : IDisposable
     /// Gets the workflow stage relation service.
     /// </summary>
     IWorkflowStageRelationService WorkflowStageRelations { get; }
+    
+    /// <summary>
+    /// Gets the workflow stage roles repository.
+    /// </summary>
+    IWorkflowStageRoleRepository WorkflowStageRoles { get; }
 }

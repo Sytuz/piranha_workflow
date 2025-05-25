@@ -228,6 +228,11 @@ public interface IDb : IDisposable
     DbSet<Data.WorkflowStageRelation> WorkflowStageRelations { get; set; }
 
     /// <summary>
+    /// Gets/sets the workflow stage roles.
+    /// </summary>
+    DbSet<Data.WorkflowStageRole> WorkflowStageRoles { get; set; }
+
+    /// <summary>
     /// Gets the entity set for the specified type.
     /// </summary>
     DbSet<T> Set<T>() where T : class;

@@ -10,6 +10,32 @@
     <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
     <script src="~/manager/assets/js/piranha.workflowedit.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
 
+    <style>
+        .checkbox-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            background-color: #fff;
+        }
+        .checkbox-list .checkbox {
+            margin-bottom: 0.25rem;
+        }
+        .checkbox-list .checkbox:last-child {
+            margin-bottom: 0;
+        }
+        .checkbox-list label {
+            font-weight: normal;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-list input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+    </style>
+
     <script>
         piranha.permissions.load(function () {
             @if (Model.Id.HasValue)
@@ -87,6 +113,21 @@
                             </div>
                             <div class="form-group">
                                 <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>@Localizer.Workflow["Authorized Roles"]</label>
+                                <div class="checkbox-list">
+                                    <div v-for="role in availableRoles" :key="role.id" class="checkbox">
+                                        <label>
+                                            <input type="checkbox" 
+                                                   :value="role.id" 
+                                                   v-model="stage.roleIds" 
+                                                   @@change="updateStageRoles(stage, $event)">
+                                            {{ role.name }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <small class="text-muted">@Localizer.Workflow["Select which roles can perform actions in this stage"]</small>
                             </div>
                         </div>
                         <div class="actions">
