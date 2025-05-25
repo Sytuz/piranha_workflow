@@ -1,0 +1,110 @@
+@page "~/manager/workflow/edit/{id?}"
+@model Piranha.Manager.Areas.Manager.Pages.WorkflowEditModel
+@inject ManagerLocalizer Localizer
+@{
+    ViewBag.Title = Localizer.Workflow["Edit workflow"];
+    ViewBag.MenuItem = "Workflows";
+}
+@section script
+{
+    <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script src="~/manager/assets/js/piranha.workflowedit.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+
+    <script>
+        piranha.permissions.load(function () {
+            @if (Model.Id.HasValue)
+            {
+                <text>piranha.workflowedit.load("@Model.Id");</text>
+            }
+            else
+            {
+                <text>piranha.workflowedit.create();</text>
+            }
+            $(".title input").focus();
+        });
+    </script>
+}
+
+<div id="workflowedit">
+    <div class="top">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
+                <li class="breadcrumb-item"><a href="~/manager/workflow">@Localizer.Menu["Workflows"]</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Localizer.General["Edit"]</li>
+            </ol>
+        </nav>
+
+        <div class="container-fluid app" :class="{ ready: !loading }">
+            <div class="top-nav">
+                <button v-on:click.prevent="save" class="btn btn-success btn-labeled">
+                    <i class="fas fa-check"></i>@Localizer.General["Save"]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid app" :class="{ ready: !loading }">
+        <!-- Title -->
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group title">
+                            <input v-model="title" type="text" class="form-control form-control-lg" placeholder="@Localizer.Workflow["Your workflow title"]">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <textarea v-model="description" class="form-control" placeholder="@Localizer.General["Description"]" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stages -->
+        <div class="card">
+            <div class="card-header">
+                <span class="title">@Localizer.Workflow["Stages"]</span>
+            </div>
+            <div class="card-body">
+                <div class="sortable">
+                    <div v-for="(stage, index) in stages" class="sortable-item">
+                        <div class="actions-move">
+                            <button v-on:click.prevent="moveStageUp(index)" class="btn btn-sm" :disabled="index === 0">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                            <button v-on:click.prevent="moveStageDown(index)" class="btn btn-sm" :disabled="index === stages.length - 1">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="content">
+                            <div class="form-group">
+                                <input v-model="stage.title" type="text" class="form-control" placeholder="@Localizer.Workflow["Stage name"]">
+                            </div>
+                            <div class="form-group">
+                                <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]"></textarea>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button v-on:click.prevent="removeStage(index)" class="btn btn-sm danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div v-if="stages.length === 0" class="empty-info">
+                        <p>@Localizer.Workflow["No stages have been added yet."]</p>
+                    </div>
+                    <div class="addbutton">
+                        <button v-on:click.prevent="addStage" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> @Localizer.Workflow["Add stage"]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

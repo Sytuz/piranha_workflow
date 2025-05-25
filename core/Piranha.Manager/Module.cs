@@ -59,7 +59,9 @@ public sealed class Module : IModule
         new PermissionItem { Name = Permission.SitesAdd, Title = "Add Sites", Category = "Sites" },
         new PermissionItem { Name = Permission.SitesDelete, Title = "Delete Sites", Category = "Sites" },
         new PermissionItem { Name = Permission.SitesEdit, Title = "Edit Sites", Category = "Sites" },
-        new PermissionItem { Name = Permission.SitesSave, Title = "Save Sites", Category = "Sites" }
+        new PermissionItem { Name = Permission.SitesSave, Title = "Save Sites", Category = "Sites" },
+
+        new PermissionItem { Name = Permission.Admin, Title = "Workflow Management", Category = "Content"}
     };
 
     /// <summary>

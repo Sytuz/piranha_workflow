@@ -363,6 +363,26 @@ public sealed class App
                     {
                         module.Instance.Init();
                     }
+                    
+                    // Create the default workflow if none exists
+                    try
+                    {
+                        // Check if we have any workflows
+                        var workflows = api.Workflows.GetAllAsync().GetAwaiter().GetResult();
+                        
+                        // If no workflows exist, create the standard workflow
+                        if (!workflows.Any())
+                        {
+                            api.Workflows.CreateStandardWorkflowAsync(
+                                "Standard Workflow", 
+                                "Default workflow with Draft, Review, and Approved stages").GetAwaiter().GetResult();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the error but continue initialization
+                        Console.WriteLine($"Error initializing workflows: {ex.Message}");
+                    }
 
                     _isInitialized = true;
                 }

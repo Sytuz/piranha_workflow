@@ -83,6 +83,11 @@ namespace Piranha.Manager
         public IStringLocalizer<Localization.Site> Site { get; private set; }
 
         /// <summary>
+        /// Gets/sets workflow string localization.
+        /// </summary>
+        public IStringLocalizer<Localization.Workflow> Workflow { get; private set; }
+
+        /// <summary>
         /// Default constructor.
         /// </summary>
         public ManagerLocalizer(
@@ -98,7 +103,8 @@ namespace Piranha.Manager
             IStringLocalizer<Localization.Module> module,
             IStringLocalizer<Localization.Page> page,
             IStringLocalizer<Localization.Post> post,
-            IStringLocalizer<Localization.Site> site)
+            IStringLocalizer<Localization.Site> site,
+            IStringLocalizer<Localization.Workflow> workflow)
         {
             Alias = alias;
             Comment = comment;
@@ -113,6 +119,7 @@ namespace Piranha.Manager
             Page = page;
             Post = post;
             Site = site;
+            Workflow = workflow;
         }
     }
 }
