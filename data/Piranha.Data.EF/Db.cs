@@ -237,6 +237,11 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.WorkflowStageRelation> WorkflowStageRelations { get; set; }
 
     /// <summary>
+    /// Gets or sets the change requests.
+    /// </summary>
+    public DbSet<Data.ChangeRequest> ChangeRequests { get; set; }
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="options">Configuration options</param>
@@ -490,6 +495,22 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
             .WithMany(w => w.Relations)
             .HasForeignKey(r => r.WorkflowId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // ChangeRequest configurations
+        mb.Entity<Data.ChangeRequest>().ToTable("Piranha_ChangeRequests");
+        mb.Entity<Data.ChangeRequest>().Property(c => c.Title).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.ChangeRequest>().Property(c => c.Content).HasColumnType("TEXT").IsRequired();
+        mb.Entity<Data.ChangeRequest>().Property(c => c.Notes).HasMaxLength(1024);
+        mb.Entity<Data.ChangeRequest>()
+            .HasOne(c => c.Workflow)
+            .WithMany()
+            .HasForeignKey(c => c.WorkflowId)
+            .OnDelete(DeleteBehavior.Restrict);
+        mb.Entity<Data.ChangeRequest>()
+            .HasOne(c => c.Stage)
+            .WithMany()
+            .HasForeignKey(c => c.StageId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     /// <summary>
