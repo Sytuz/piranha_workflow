@@ -18,6 +18,15 @@ public class PermissionModel
         public bool Edit { get; set; }
     }
 
+    public class ChangeRequestPermissions
+    {
+        public bool Add { get; set; }
+        public bool Delete { get; set; }
+        public bool Edit { get; set; }
+        public bool Save { get; set; }
+        public bool Submit { get; set; }
+    }
+
     public class CommentPermissions
     {
         public bool Approve { get; set; }
@@ -62,6 +71,7 @@ public class PermissionModel
     }
 
     public AliasPermissions Aliases { get; } = new AliasPermissions();
+    public ChangeRequestPermissions ChangeRequests { get; } = new ChangeRequestPermissions();
     public CommentPermissions Comments { get; } = new CommentPermissions();
     public MediaPermissions Media { get; } = new MediaPermissions();
     public PagePermissions Pages { get; } = new PagePermissions();

@@ -101,4 +101,9 @@ public interface IApi : IDisposable
     /// Gets the workflow stage relation service.
     /// </summary>
     IWorkflowStageRelationService WorkflowStageRelations { get; }
+    
+    /// <summary>
+    /// Gets the change request service.
+    /// </summary>
+    IChangeRequestService ChangeRequests { get; }
 }
