@@ -10,7 +10,9 @@ piranha.workflowedit = new Vue({
         title: "",
         description: "",
         stages: [], // Stages will have { id, title, description }
+        availableRoles: [],
         saveUrl: piranha.baseUrl + "manager/api/workflow/save",
+        rolesUrl: piranha.baseUrl + "manager/api/workflow/roles",
         originalTitle: null
     },
     methods: {
@@ -19,8 +21,17 @@ piranha.workflowedit = new Vue({
             this.title = result.title;
             this.originalTitle = result.title;
             this.description = result.description;
-            // Assuming result.stages from API already has 'title' and 'description'
-            this.stages = result.stages || []; 
+            // Convert stages and roles from API format to UI format
+            this.stages = (result.stages || []).map(function(stage) {
+                return {
+                    id: stage.id,
+                    title: stage.title,
+                    description: stage.description,
+                    roleIds: (stage.roles || []).map(function(role) {
+                        return role.roleId;
+                    }) || [] // Ensure this is always an array
+                };
+            });
             
             this.loading = false;
         },
@@ -63,19 +74,22 @@ piranha.workflowedit = new Vue({
             this.stages.push({
                 id: piranha.utils.generateId(),
                 title: "Draft", // Changed from name to title
-                description: "Initial draft stage"
+                description: "Initial draft stage",
+                roleIds: [] // Ensure this is always an array
             });
             
             this.stages.push({
                 id: piranha.utils.generateId(),
                 title: "Review", // Changed from name to title
-                description: "Content review stage"
+                description: "Content review stage",
+                roleIds: [] // Ensure this is always an array
             });
             
             this.stages.push({
                 id: piranha.utils.generateId(),
                 title: "Published", // Changed from name to title
-                description: "Final published stage"
+                description: "Final published stage",
+                roleIds: [] // Ensure this is always an array
             });
             
             this.loading = false;
@@ -120,7 +134,20 @@ piranha.workflowedit = new Vue({
                 id: self.id,
                 title: self.title,
                 description: self.description,
-                stages: self.stages // Ensure stages sent to API have 'title'
+                stages: self.stages.map(function(stage) {
+                    return {
+                        id: stage.id,
+                        title: stage.title,
+                        description: stage.description,
+                        roles: (stage.roleIds || []).map(function(roleId) {
+                            return {
+                                id: piranha.utils.generateId(),
+                                workflowStageId: stage.id,
+                                roleId: roleId
+                            };
+                        })
+                    };
+                })
             };
             
             fetch(self.saveUrl, {
@@ -172,7 +199,8 @@ piranha.workflowedit = new Vue({
             this.stages.push({
                 id: piranha.utils.generateId(),
                 title: "", // Changed from name to title
-                description: ""
+                description: "",
+                roleIds: [] // Ensure this is always an array
             });
         },
         removeStage: function (index) {
@@ -191,6 +219,51 @@ piranha.workflowedit = new Vue({
                 this.stages.splice(index, 1);
                 this.stages.splice(index + 1, 0, stage);
             }
+        },
+        updateStageRoles: function (stage, event) {
+            // This method is called when role checkboxes are changed
+            // Vue's v-model will automatically handle the updates
+        },
+        toggleStageRole: function (stage, roleId, event) {
+            // Initialize roleIds array if it doesn't exist
+            if (!stage.roleIds) {
+                stage.roleIds = [];
+            }
+            
+            if (event.target.checked) {
+                // Add role if not already present
+                if (!stage.roleIds.includes(roleId)) {
+                    stage.roleIds.push(roleId);
+                }
+            } else {
+                // Remove role if present
+                const index = stage.roleIds.indexOf(roleId);
+                if (index > -1) {
+                    stage.roleIds.splice(index, 1);
+                }
+            }
+        },
+        loadRoles: function () {
+            var self = this;
+            
+            fetch(this.rolesUrl)
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to load roles');
+                    }
+                    return response.json();
+                })
+                .then(function (roles) {
+                    self.availableRoles = roles;
+                })
+                .catch(function (error) {
+                    console.log("Error loading roles:", error);
+                    piranha.notifications.push({
+                        body: "Failed to load available roles",
+                        type: "warning",
+                        hide: true
+                    });
+                });
         }
     },
     created: function () {
@@ -203,6 +276,10 @@ piranha.workflowedit = new Vue({
                 }
             };
         }
+    },
+    mounted: function () {
+        // Load available roles when component is mounted
+        this.loadRoles();
     },
     updated: function () {
         // Initialize sortable elements after the DOM has been updated
