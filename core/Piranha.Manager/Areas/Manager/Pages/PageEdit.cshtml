@@ -13,6 +13,14 @@
     <script src="@Url.Content(Piranha.Manager.Editor.EditorScripts.EditorScriptUrl)"></script>
     <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
     <script src="~/manager/assets/js/piranha.pageedit.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    
+    <script>
+        // Configuration for change request creation
+        window.changeRequestConfig = {
+            userId: '@Model.UserId',
+            defaultWorkflowId: '@Model.DefaultWorkflowId'
+        };
+    </script>
 
     @if (action == "edit")
     {
@@ -209,4 +217,5 @@
     </div>
 
     <partial name="Partial/_PageSettings" />
+    <partial name="~/Areas/Manager/Shared/Partial/_ChangeRequestModal.cshtml" />
 </div>
