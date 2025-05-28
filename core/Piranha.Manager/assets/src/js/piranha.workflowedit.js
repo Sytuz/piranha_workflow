@@ -2,6 +2,16 @@
     piranha
 */
 
+// Initialize utils before creating the Vue component
+if (!piranha.utils) {
+    piranha.utils = {
+        generateId: function () {
+            return Math.random().toString(36).substring(2, 15) +
+                Math.random().toString(36).substring(2, 15);
+        }
+    };
+}
+
 piranha.workflowedit = new Vue({
     el: "#workflowedit",
     data: {
@@ -141,9 +151,8 @@ piranha.workflowedit = new Vue({
                         description: stage.description,
                         roles: (stage.roleIds || []).map(function(roleId) {
                             return {
-                                id: piranha.utils.generateId(),
-                                workflowStageId: stage.id,
                                 roleId: roleId
+                                // Let the backend handle workflowStageId assignment
                             };
                         })
                     };
@@ -267,15 +276,7 @@ piranha.workflowedit = new Vue({
         }
     },
     created: function () {
-        // Initialize utils (if needed)
-        if (!piranha.utils) {
-            piranha.utils = {
-                generateId: function () {
-                    return Math.random().toString(36).substring(2, 15) +
-                        Math.random().toString(36).substring(2, 15);
-                }
-            };
-        }
+        // Vue component initialization
     },
     mounted: function () {
         // Load available roles when component is mounted
@@ -312,13 +313,3 @@ piranha.workflowedit = new Vue({
         }
     }
 });
-
-// Register utils if needed
-if (!piranha.utils) {
-    piranha.utils = {
-        generateId: function () {
-            return Math.random().toString(36).substring(2, 15) +
-                Math.random().toString(36).substring(2, 15);
-        }
-    };
-}
