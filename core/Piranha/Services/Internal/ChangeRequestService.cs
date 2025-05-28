@@ -98,53 +98,39 @@ namespace Piranha.Services
         }
 
         /// <inheritdoc />
-        public async Task<ChangeRequest> CreateAsync(string title, string content, Guid workflowId, Guid createdById, Guid? contentId = null)
+        public async Task<ChangeRequest> CreateAsync(string title, Guid workflowId, Guid createdById, Guid contentId, string contentSnapshot, string notes = null)
         {
             // Validate required fields
             if (string.IsNullOrWhiteSpace(title))
-            {
                 throw new ValidationException("Title is required");
-            }
-
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                throw new ValidationException("Content is required");
-            }
-
             if (workflowId == Guid.Empty)
-            {
                 throw new ValidationException("WorkflowId is required");
-            }
-
             if (createdById == Guid.Empty)
-            {
                 throw new ValidationException("CreatedById is required");
-            }
+            if (contentId == Guid.Empty)
+                throw new ValidationException("ContentId is required");
+            if (string.IsNullOrWhiteSpace(contentSnapshot))
+                throw new ValidationException("ContentSnapshot is required");
 
             // Validate that the workflow exists
             var workflow = await _workflowRepo.GetByIdAsync(workflowId).ConfigureAwait(false);
             if (workflow == null)
-            {
                 throw new ValidationException("Specified workflow does not exist");
-            }
 
-            // Get the first stage of the workflow
             var firstStage = workflow.Stages?.OrderBy(s => s.SortOrder).FirstOrDefault();
             if (firstStage == null)
-            {
                 throw new ValidationException("Workflow has no stages defined");
-            }
 
-            // Create the change request
             var changeRequest = new ChangeRequest
             {
                 Id = Guid.NewGuid(),
                 Title = title,
-                Content = content,
                 WorkflowId = workflowId,
                 StageId = firstStage.Id,
                 CreatedById = createdById,
                 ContentId = contentId,
+                ContentSnapshot = contentSnapshot,
+                Notes = notes,
                 Status = ChangeRequestStatus.Draft,
                 CreatedAt = DateTime.Now,
                 LastModified = DateTime.Now
@@ -163,9 +149,9 @@ namespace Piranha.Services
                 throw new ValidationException("Title is required");
             }
 
-            if (string.IsNullOrWhiteSpace(model.Content))
+            if (string.IsNullOrWhiteSpace(model.ContentSnapshot))
             {
-                throw new ValidationException("Content is required");
+                throw new ValidationException("ContentSnapshot is required");
             }
 
             await _repo.SaveAsync(model).ConfigureAwait(false);

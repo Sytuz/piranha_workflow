@@ -22,10 +22,16 @@ namespace Piranha.Data
         public string Title { get; set; }
 
         /// <summary>
-        /// Gets or sets the content of the change request.
+        /// Gets or sets the content id this change request is for (optional).
         /// </summary>
         [Required]
-        public string Content { get; set; }
+        public Guid ContentId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the snapshot of the content.
+        /// </summary>
+        [Required]
+        public string ContentSnapshot { get; set; }
 
         /// <summary>
         /// Gets or sets the workflow id this change request belongs to.
@@ -54,11 +60,6 @@ namespace Piranha.Data
         /// Gets or sets the last modified date.
         /// </summary>
         public DateTime LastModified { get; set; }
-
-        /// <summary>
-        /// Gets or sets the content id this change request is for (optional).
-        /// </summary>
-        public Guid? ContentId { get; set; }
 
         /// <summary>
         /// Gets or sets the status of this change request.

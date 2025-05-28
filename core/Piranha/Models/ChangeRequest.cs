@@ -20,10 +20,10 @@ namespace Piranha.Models
         public string Title { get; set; }
 
         /// <summary>
-        /// Gets or sets the content of the change request.
+        /// Gets or sets the serialized snapshot of the content at the time of the change request.
         /// </summary>
-        [Required(ErrorMessage = "Content is required")]
-        public string Content { get; set; }
+        [Required(ErrorMessage = "ContentSnapshot is required")]
+        public string ContentSnapshot { get; set; }
 
         /// <summary>
         /// Gets or sets the workflow id this change request belongs to.
@@ -54,9 +54,10 @@ namespace Piranha.Models
         public DateTime LastModified { get; set; }
 
         /// <summary>
-        /// Gets or sets the content id this change request is for (optional).
+        /// Gets or sets the content id this change request is for (required).
         /// </summary>
-        public Guid? ContentId { get; set; }
+        [Required(ErrorMessage = "ContentId is required")]
+        public Guid ContentId { get; set; }
 
         /// <summary>
         /// Gets or sets the status of this change request.

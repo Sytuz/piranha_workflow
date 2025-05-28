@@ -43,7 +43,7 @@ namespace Piranha.Repositories
                 {
                     Id = c.Id,
                     Title = c.Title,
-                    Content = c.Content,
+                    ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
                     CreatedById = c.CreatedById,
@@ -73,7 +73,7 @@ namespace Piranha.Repositories
                 {
                     Id = changeRequest.Id,
                     Title = changeRequest.Title,
-                    Content = changeRequest.Content,
+                    ContentSnapshot = changeRequest.ContentSnapshot,
                     WorkflowId = changeRequest.WorkflowId,
                     StageId = changeRequest.StageId,
                     CreatedById = changeRequest.CreatedById,
@@ -102,7 +102,7 @@ namespace Piranha.Repositories
                 {
                     Id = c.Id,
                     Title = c.Title,
-                    Content = c.Content,
+                    ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
                     CreatedById = c.CreatedById,
@@ -130,7 +130,7 @@ namespace Piranha.Repositories
                 {
                     Id = c.Id,
                     Title = c.Title,
-                    Content = c.Content,
+                    ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
                     CreatedById = c.CreatedById,
@@ -158,7 +158,7 @@ namespace Piranha.Repositories
                 {
                     Id = c.Id,
                     Title = c.Title,
-                    Content = c.Content,
+                    ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
                     CreatedById = c.CreatedById,
@@ -186,7 +186,7 @@ namespace Piranha.Repositories
                 {
                     Id = c.Id,
                     Title = c.Title,
-                    Content = c.Content,
+                    ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
                     CreatedById = c.CreatedById,
@@ -214,7 +214,7 @@ namespace Piranha.Repositories
                 {
                     Id = c.Id,
                     Title = c.Title,
-                    Content = c.Content,
+                    ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
                     CreatedById = c.CreatedById,
@@ -247,7 +247,7 @@ namespace Piranha.Repositories
             }
 
             entity.Title = changeRequest.Title;
-            entity.Content = changeRequest.Content;
+            entity.ContentSnapshot = changeRequest.ContentSnapshot;
             entity.WorkflowId = changeRequest.WorkflowId;
             entity.StageId = changeRequest.StageId;
             entity.CreatedById = changeRequest.CreatedById;
@@ -285,7 +285,7 @@ namespace Piranha.Repositories
                 {
                     Id = entity.Id,
                     Title = entity.Title,
-                    Content = entity.Content,
+                    ContentSnapshot = entity.ContentSnapshot,
                     WorkflowId = entity.WorkflowId,
                     StageId = entity.StageId,
                     CreatedById = entity.CreatedById,

@@ -48,12 +48,13 @@ namespace Piranha.Services
         /// Creates a new change request.
         /// </summary>
         /// <param name="title">The title</param>
-        /// <param name="content">The content</param>
         /// <param name="workflowId">The workflow id</param>
         /// <param name="createdById">The creator user id</param>
-        /// <param name="contentId">Optional content id</param>
+        /// <param name="contentId">Content id (required)</param>
+        /// <param name="contentSnapshot">Serialized snapshot of content (required)</param>
+        /// <param name="notes">Optional notes</param>
         /// <returns>The created change request</returns>
-        Task<ChangeRequest> CreateAsync(string title, string content, Guid workflowId, Guid createdById, Guid? contentId = null);
+        Task<ChangeRequest> CreateAsync(string title, Guid workflowId, Guid createdById, Guid contentId, string contentSnapshot, string notes = null);
 
         /// <summary>
         /// Saves the given change request.

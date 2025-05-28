@@ -183,12 +183,21 @@ namespace Piranha.Manager.Controllers
                     });
                 }
 
+                if (string.IsNullOrWhiteSpace(model.ContentSnapshot))
+                {
+                    return BadRequest(new ErrorMessage
+                    {
+                        Body = "Content snapshot is required"
+                    });
+                }
+
                 var changeRequest = await _service.CreateAsync(
                     model.Title,
-                    model.Content,
                     model.WorkflowId,
                     model.CreatedById,
-                    model.ContentId);
+                    model.ContentId,
+                    model.ContentSnapshot,
+                    model.Notes);
 
                 return Ok(changeRequest);
             }
@@ -394,11 +403,6 @@ namespace Piranha.Manager.Controllers
         public string Title { get; set; }
 
         /// <summary>
-        /// Gets/sets the change request content.
-        /// </summary>
-        public string Content { get; set; }
-
-        /// <summary>
         /// Gets/sets the workflow id.
         /// </summary>
         [Required]
@@ -413,12 +417,19 @@ namespace Piranha.Manager.Controllers
         /// <summary>
         /// Gets/sets the content id this change request is for.
         /// </summary>
-        public Guid? ContentId { get; set; }
+        [Required]
+        public Guid ContentId { get; set; }
 
         /// <summary>
         /// Gets/sets optional notes.
         /// </summary>
         public string Notes { get; set; }
+
+        /// <summary>
+        /// Gets/sets the content snapshot.
+        /// </summary>
+        [Required]
+        public string ContentSnapshot { get; set; }
     }
 
     /// <summary>
