@@ -11,6 +11,7 @@ piranha.workflowedit = new Vue({
         description: "",
         stages: [], // Stages will have { id, title, description }
         availableRoles: [],
+        relations: [], // Stage relations: { sourceStageId, targetStageId }
         saveUrl: piranha.baseUrl + "manager/api/workflow/save",
         rolesUrl: piranha.baseUrl + "manager/api/workflow/roles",
         originalTitle: null
@@ -31,6 +32,14 @@ piranha.workflowedit = new Vue({
                     roleIds: (stage.roles || []).map(function(role) {
                         return role.roleId;
                     }) || [] // Ensure this is always an array
+                };
+            });
+            
+            // Convert relations from API format to UI format
+            this.relations = (result.relations || []).map(function(relation) {
+                return {
+                    sourceStageId: relation.sourceStageId,
+                    targetStageId: relation.targetStageId
                 };
             });
             
@@ -70,6 +79,7 @@ piranha.workflowedit = new Vue({
             this.title = "";
             this.description = "";
             this.stages = [];
+            this.relations = [];
             
             // Add default stages for a new workflow
             this.stages.push({
@@ -151,6 +161,12 @@ piranha.workflowedit = new Vue({
                             };
                         })
                     };
+                }),
+                relations: self.relations.map(function(relation) {
+                    return {
+                        sourceStageId: relation.sourceStageId,
+                        targetStageId: relation.targetStageId
+                    };
                 })
             };
             
@@ -209,7 +225,15 @@ piranha.workflowedit = new Vue({
             });
         },
         removeStage: function (index) {
+            const stageToRemove = this.stages[index];
+            
+            // Remove the stage
             this.stages.splice(index, 1);
+            
+            // Clean up any relations involving this stage
+            this.relations = this.relations.filter(function(relation) {
+                return relation.sourceStageId !== stageToRemove.id && relation.targetStageId !== stageToRemove.id;
+            });
         },
         moveStageUp: function (index) {
             if (index > 0) {
@@ -247,6 +271,36 @@ piranha.workflowedit = new Vue({
                     stage.roleIds.splice(index, 1);
                 }
             }
+        },
+        // Stage Relations Methods
+        canTransitionTo: function (sourceStageId, targetStageId) {
+            return this.relations.some(function(relation) {
+                return relation.sourceStageId === sourceStageId && relation.targetStageId === targetStageId;
+            });
+        },
+        toggleStageRelation: function (sourceStageId, targetStageId, event) {
+            if (event.target.checked) {
+                // Add relation if not already present
+                if (!this.canTransitionTo(sourceStageId, targetStageId)) {
+                    this.relations.push({
+                        sourceStageId: sourceStageId,
+                        targetStageId: targetStageId
+                    });
+                }
+            } else {
+                // Remove relation if present
+                const index = this.relations.findIndex(function(relation) {
+                    return relation.sourceStageId === sourceStageId && relation.targetStageId === targetStageId;
+                });
+                if (index > -1) {
+                    this.relations.splice(index, 1);
+                }
+            }
+        },
+        getOtherStages: function (currentStageId) {
+            return this.stages.filter(function(stage) {
+                return stage.id !== currentStageId;
+            });
         },
         loadRoles: function () {
             var self = this;
