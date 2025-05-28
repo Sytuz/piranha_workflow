@@ -2,16 +2,6 @@
     piranha
 */
 
-// Initialize utils before creating the Vue component
-if (!piranha.utils) {
-    piranha.utils = {
-        generateId: function () {
-            return Math.random().toString(36).substring(2, 15) +
-                Math.random().toString(36).substring(2, 15);
-        }
-    };
-}
-
 piranha.workflowedit = new Vue({
     el: "#workflowedit",
     data: {
