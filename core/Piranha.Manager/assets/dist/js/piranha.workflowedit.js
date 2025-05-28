@@ -27,6 +27,7 @@ piranha.workflowedit = new Vue({
                     id: stage.id,
                     title: stage.title,
                     description: stage.description,
+                    sortOrder: stage.sortOrder, // Preserve sort order from API
                     roleIds: (stage.roles || []).map(function(role) {
                         return role.roleId;
                     }) || [] // Ensure this is always an array
@@ -75,6 +76,7 @@ piranha.workflowedit = new Vue({
                 id: piranha.utils.generateId(),
                 title: "Draft", // Changed from name to title
                 description: "Initial draft stage",
+                sortOrder: 1, // First stage
                 roleIds: [] // Ensure this is always an array
             });
             
@@ -82,6 +84,7 @@ piranha.workflowedit = new Vue({
                 id: piranha.utils.generateId(),
                 title: "Review", // Changed from name to title
                 description: "Content review stage",
+                sortOrder: 2, // Second stage
                 roleIds: [] // Ensure this is always an array
             });
             
@@ -89,6 +92,7 @@ piranha.workflowedit = new Vue({
                 id: piranha.utils.generateId(),
                 title: "Published", // Changed from name to title
                 description: "Final published stage",
+                sortOrder: 3, // Third stage
                 roleIds: [] // Ensure this is always an array
             });
             
@@ -134,11 +138,12 @@ piranha.workflowedit = new Vue({
                 id: self.id,
                 title: self.title,
                 description: self.description,
-                stages: self.stages.map(function(stage) {
+                stages: self.stages.map(function(stage, index) {
                     return {
                         id: stage.id,
                         title: stage.title,
                         description: stage.description,
+                        sortOrder: index + 1, // Update sort order based on current position
                         roles: (stage.roleIds || []).map(function(roleId) {
                             return {
                                 roleId: roleId
@@ -199,6 +204,7 @@ piranha.workflowedit = new Vue({
                 id: piranha.utils.generateId(),
                 title: "", // Changed from name to title
                 description: "",
+                sortOrder: this.stages.length + 1, // Add sort order based on current position
                 roleIds: [] // Ensure this is always an array
             });
         },
