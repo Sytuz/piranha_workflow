@@ -7,10 +7,9 @@
 }
 @section script
 {
-    <!-- Explicitly load dependencies in correct order -->
+    <!-- Explicitly load GoJS library first -->
     <script src="~/manager/assets/js/piranha-deps.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
     <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
-    <!-- Remove workflow.min.js as it's likely conflicting with workflowedit.min.js -->
     <script src="~/manager/assets/js/piranha.workflowedit.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
 
     <style>
@@ -44,15 +43,13 @@
             margin-bottom: 2rem;
         }
         .gojs-diagram-container {
-            height: 400px !important; /* Use !important to override any inline styles */
-            min-height: 400px !important; /* Enforce minimum height */
+            height: 400px;
+            min-height: 400px; /* Enforce minimum height */
             border: 1px solid #dee2e6;
             border-radius: 0.25rem;
             background-color: #f8f9fa;
             position: relative;
-            width: 100% !important; /* Ensure full width */
-            display: block !important; /* Ensure proper display mode */
-            overflow: hidden; /* Control overflow */
+            width: 100%; /* Ensure full width */
         }
         .empty-diagram-message {
             position: absolute;
@@ -65,50 +62,31 @@
     </style>
 
     <script>
-        // Wait for window to fully load (all assets including scripts)
-        window.addEventListener('load', function() {
-            console.log("Window fully loaded with all assets");
-            
-            // Check that GoJS is available
+        // Wait for document ready to ensure proper initialization
+        document.addEventListener("DOMContentLoaded", function() {
+            console.log("WorkflowEdit - DOM fully loaded");
             if (typeof go === 'undefined') {
-                console.error("GoJS library not found! Loading workflow will be delayed...");
-                // We'll continue anyway and let the retry mechanism in workflowedit handle it
+                console.error("GoJS library not found! Check script loading order.");
             } else {
                 console.log("GoJS library successfully loaded");
             }
             
-            // Make sure Vue is completely initialized before accessing
-            setTimeout(function() {
-                // Initialize workflow after a short delay to ensure Vue is ready
-                piranha.permissions.load(function() {
-                    console.log("Permissions loaded, initializing workflow editor");
-                    
-                    @if (Model.Id.HasValue)
-                    {
-                        <text>piranha.workflowedit.load("@Model.Id");</text>
-                    }
-                    else
-                    {
-                        <text>piranha.workflowedit.create();</text>
-                    }
-                    
-                    // Focus on title field
-                    $(".title input").focus();
-                    
-                    // Force a resize event to make sure the diagram is properly sized
-                    setTimeout(function() {
-                        window.dispatchEvent(new Event('resize'));
-                        
-                        // Force explicit diagram update after a short delay
-                        setTimeout(function() {
-                            if (piranha.workflowedit && typeof piranha.workflowedit.updateGoJsModel === 'function') {
-                                console.log("Forcing diagram update");
-                                piranha.workflowedit.updateGoJsModel();
-                            }
-                        }, 500);
-                    }, 100);
-                });
-            }, 200);
+            piranha.permissions.load(function() {
+                console.log("Permissions loaded, initializing workflow editor");
+                
+                @if (Model.Id.HasValue)
+                {
+                    <text>piranha.workflowedit.load("@Model.Id");</text>
+                }
+                else
+                {
+                    <text>piranha.workflowedit.create();</text>
+                }
+                $(".title input").focus();
+                
+                // Let the Vue component handle diagram initialization through its lifecycle hooks
+                // This will be more reliable than separate initialization attempts here
+            });
         });
     </script>
 }
@@ -159,15 +137,13 @@
                 <span class="title">@Localizer.Workflow["Workflow Preview"]</span>
             </div>
             <div class="card-body">
-                <!-- Empty message rendered outside the diagram div to prevent interference -->
-                <div v-if="stages.length === 0" class="empty-diagram-message position-absolute" style="z-index: 10; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                    <i class="fas fa-project-diagram fa-3x mb-3"></i>
-                    <h5>No stages defined yet</h5>
-                    <p class="text-muted">Add stages below to see the workflow diagram</p>
+                <div ref="workflowDiagramDiv" id="workflowDiagramDiv" class="gojs-diagram-container">
+                    <div v-if="stages.length === 0" class="empty-diagram-message">
+                        <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                        <h5>No stages defined yet</h5>
+                        <p class="text-muted">Add stages below to see the workflow diagram</p>
+                    </div>
                 </div>
-                
-                <!-- GoJS diagram container - completely empty for GoJS to work with -->
-                <div ref="workflowDiagramDiv" id="workflowDiagramDiv" class="gojs-diagram-container"></div>
             </div>
         </div>
 
