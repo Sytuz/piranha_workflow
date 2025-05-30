@@ -99,7 +99,8 @@ public class UI : BaseTests
             new SiteTypeRepository(db),
             new WorkflowRepository(db),
             new WorkflowStageRepository(db),
-            new WorkflowStageRelationRepository(db)
+            new WorkflowStageRelationRepository(db),
+            new ChangeRequestRepository(db)
         );
     }
 }

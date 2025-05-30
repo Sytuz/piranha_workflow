@@ -59,7 +59,11 @@ piranha.postedit = new Vue({
         selectedCategory: null,
         selectedTags: [],
         selectedRoute: null,
-        routes: []
+        routes: [],
+        changeRequestTitle: "",
+        changeRequestNotes: "",
+        changeRequestTitleError: null,
+        submittingChangeRequest: false
     },
     computed: {
         contentRegions: function () {
@@ -404,6 +408,97 @@ piranha.postedit = new Vue({
             } else {
                 this.excerpt = e.target.innerHTML;
             }
+        },
+        openChangeRequestModal: function () {
+            this.changeRequestTitle = "";
+            this.changeRequestNotes = "";
+            this.changeRequestTitleError = null;
+            $('#changeRequestModal').modal('show');
+        },
+        submitChangeRequest: function () {
+            this.changeRequestTitleError = null;
+
+            if (!this.changeRequestTitle || this.changeRequestTitle.trim() === "") {
+                this.changeRequestTitleError = "Title is required";
+                return;
+            }
+
+            var workflowId = window.changeRequestConfig ? window.changeRequestConfig.defaultWorkflowId : null;
+            var createdById = window.changeRequestConfig ? window.changeRequestConfig.userId : null;
+
+            if (!workflowId) {
+                this.changeRequestTitleError = "Workflow is required";
+                return;
+            }
+            if (!createdById) {
+                this.changeRequestTitleError = "User is required";
+                return;
+            }
+
+            var content = "";
+            if (this.excerpt && this.excerpt.trim() !== "") {
+                content = this.excerpt.trim();
+            } else if (this.title && this.title.trim() !== "") {
+                content = this.title.trim();
+            } else if (this.changeRequestTitle && this.changeRequestTitle.trim() !== "") {
+                content = this.changeRequestTitle.trim();
+            }
+
+            var contentSnapshot = JSON.stringify({
+                title: this.title,
+                blocks: this.blocks,
+                regions: this.regions,
+                excerpt: this.excerpt,
+                // add other fields as needed
+            });
+
+            if (!contentSnapshot || contentSnapshot === "{}") {
+                this.changeRequestTitleError = "Content snapshot is required";
+                return;
+            }
+
+            var data = {
+                ContentId: this.id,
+                Title: this.changeRequestTitle.trim(),
+                Notes: this.changeRequestNotes ? this.changeRequestNotes.trim() : "",
+                WorkflowId: workflowId,
+                CreatedById: createdById,
+                ContentSnapshot: contentSnapshot
+            };
+
+            fetch(piranha.baseUrl + "manager/api/changerequest/create", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...piranha.utils.antiForgeryHeaders()
+                },
+                credentials: "same-origin",
+                body: JSON.stringify(data)
+            })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error("Failed to create change request");
+                }
+            })
+            .then(function (result) {
+                piranha.postedit.submittingChangeRequest = false;
+                $('#changeRequestModal').modal('hide');
+                piranha.notifications.push({
+                    body: "Change request created successfully",
+                    type: "success",
+                    hide: true
+                });
+            })
+            .catch(function (error) {
+                piranha.postedit.submittingChangeRequest = false;
+                piranha.notifications.push({
+                    body: "Failed to create change request: " + error.message,
+                    type: "danger",
+                    hide: true
+                });
+            });
         }
     },
     created: function () {
