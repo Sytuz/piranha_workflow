@@ -121,6 +121,11 @@ public static class Actions
             },
             new ToolbarAction
             {
+                InternalId = "SubmitChangeRequest",
+                ActionView = "Partial/Actions/_PageSubmitChangeRequest"
+            },
+            new ToolbarAction
+            {
                 InternalId = "Save",
                 ActionView = "Partial/Actions/_PageSave"
             },
@@ -167,6 +172,11 @@ public static class Actions
             {
                 InternalId = "Preview",
                 ActionView = "Partial/Actions/_PostPreview"
+            },
+            new ToolbarAction
+            {
+                InternalId = "SubmitChangeRequest",
+                ActionView = "Partial/Actions/_PostSubmitChangeRequest"
             },
             new ToolbarAction
             {
