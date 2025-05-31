@@ -1521,6 +1521,33 @@ namespace Piranha.Data.EF.SQLite.Migrations
                     b.ToTable("Piranha_WorkflowStageRelations", (string)null);
                 });
 
+            modelBuilder.Entity("Piranha.Data.WorkflowStageRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RoleId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("WorkflowStageId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkflowStageId");
+
+                    b.ToTable("Piranha_WorkflowStageRoles", (string)null);
+                });
+
             modelBuilder.Entity("Piranha.Data.Alias", b =>
                 {
                     b.HasOne("Piranha.Data.Site", "Site")
@@ -1982,6 +2009,17 @@ namespace Piranha.Data.EF.SQLite.Migrations
                     b.Navigation("Workflow");
                 });
 
+            modelBuilder.Entity("Piranha.Data.WorkflowStageRole", b =>
+                {
+                    b.HasOne("Piranha.Data.WorkflowStage", "WorkflowStage")
+                        .WithMany("Roles")
+                        .HasForeignKey("WorkflowStageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkflowStage");
+                });
+
             modelBuilder.Entity("Piranha.Data.Block", b =>
                 {
                     b.Navigation("Fields");
@@ -2053,6 +2091,11 @@ namespace Piranha.Data.EF.SQLite.Migrations
                     b.Navigation("Relations");
 
                     b.Navigation("Stages");
+                });
+
+            modelBuilder.Entity("Piranha.Data.WorkflowStage", b =>
+                {
+                    b.Navigation("Roles");
                 });
 #pragma warning restore 612, 618
         }

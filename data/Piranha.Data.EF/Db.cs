@@ -237,6 +237,11 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.WorkflowStageRelation> WorkflowStageRelations { get; set; }
 
     /// <summary>
+    /// Gets or sets the workflow stage roles.
+    /// </summary>
+    public DbSet<Data.WorkflowStageRole> WorkflowStageRoles { get; set; }
+
+    /// <summary>
     /// Gets or sets the change requests.
     /// </summary>
     public DbSet<Data.ChangeRequest> ChangeRequests { get; set; }
@@ -496,6 +501,14 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
             .HasForeignKey(r => r.WorkflowId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        mb.Entity<Data.WorkflowStageRole>().ToTable("Piranha_WorkflowStageRoles");
+        mb.Entity<Data.WorkflowStageRole>()
+            .HasOne(sr => sr.WorkflowStage)
+            .WithMany(s => s.Roles)
+            .HasForeignKey(sr => sr.WorkflowStageId)
+            .OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<Data.WorkflowStageRole>().Property(sr => sr.RoleId).HasMaxLength(450).IsRequired();
+        
         // ChangeRequest configurations
         mb.Entity<Data.ChangeRequest>().ToTable("Piranha_ChangeRequests");
         mb.Entity<Data.ChangeRequest>().Property(c => c.Title).HasMaxLength(128).IsRequired();

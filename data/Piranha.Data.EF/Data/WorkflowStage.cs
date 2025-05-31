@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Piranha.Data
@@ -49,5 +50,10 @@ namespace Piranha.Data
         /// Gets or sets the workflow this stage belongs to.
         /// </summary>
         public Workflow Workflow { get; set; }
+
+        /// <summary>
+        /// Gets or sets the roles that can access this stage.
+        /// </summary>
+        public ICollection<WorkflowStageRole> Roles { get; set; } = new List<WorkflowStageRole>();
     }
 }

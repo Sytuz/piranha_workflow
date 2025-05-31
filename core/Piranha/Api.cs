@@ -111,9 +111,15 @@ public sealed class Api : IApi, IDisposable
     public IWorkflowStageRelationService WorkflowStageRelations { get; }
 
     /// <summary>
+    /// Gets the workflow stage roles repository.
+    /// </summary>
+    public IWorkflowStageRoleRepository WorkflowStageRoles { get; }
+
+    /// <summary>
     /// Gets the change request service.
     /// </summary>
     public IChangeRequestService ChangeRequests { get; }
+
 
     /// <summary>
     /// Gets if the current repository has caching enabled or not.
@@ -142,6 +148,7 @@ public sealed class Api : IApi, IDisposable
         ISiteTypeRepository siteTypeRepository,        IWorkflowRepository workflowRepository,
         IWorkflowStageRepository workflowStageRepository,
         IWorkflowStageRelationRepository workflowStageRelationRepository,
+        IWorkflowStageRoleRepository workflowStageRoleRepository,
         IChangeRequestRepository changeRequestRepository,
         ICache cache = null,
         IStorage storage = null,
@@ -161,8 +168,9 @@ public sealed class Api : IApi, IDisposable
         SiteTypes = new SiteTypeService(siteTypeRepository, cache);
           // Create workflow services
         Workflows = new WorkflowService(workflowRepository);
-        WorkflowStages = new WorkflowStageService(workflowStageRepository);
+        WorkflowStages = new WorkflowStageService(workflowStageRepository, workflowStageRoleRepository);
         WorkflowStageRelations = new WorkflowStageRelationService(workflowStageRelationRepository);
+        WorkflowStageRoles = workflowStageRoleRepository;
         ChangeRequests = new ChangeRequestService(changeRequestRepository, workflowRepository, workflowStageRepository);
 
         // Create services with dependencies

@@ -17,14 +17,17 @@ namespace Piranha.Services;
 public class WorkflowStageService : IWorkflowStageService
 {
     private readonly IWorkflowStageRepository _repo;
+    private readonly IWorkflowStageRoleRepository _roleRepo;
 
     /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="repo">The workflow stage repository</param>
-    public WorkflowStageService(IWorkflowStageRepository repo)
+    /// <param name="roleRepo">The workflow stage role repository</param>
+    public WorkflowStageService(IWorkflowStageRepository repo, IWorkflowStageRoleRepository roleRepo)
     {
         _repo = repo;
+        _roleRepo = roleRepo;
     }
 
     /// <inheritdoc />
@@ -48,6 +51,20 @@ public class WorkflowStageService : IWorkflowStageService
             throw new ValidationException("Title is required");
         }
 
+        // Validate unique stage name within workflow
+        var existingStages = await _repo.GetByWorkflowId(stage.WorkflowId).ConfigureAwait(false);
+        var duplicateStage = existingStages.FirstOrDefault(s => s.Id != stage.Id && s.Title.Equals(stage.Title, StringComparison.OrdinalIgnoreCase));
+        if (duplicateStage != null)
+        {
+            throw new ValidationException($"A stage with the title '{stage.Title}' already exists in this workflow");
+        }
+
+        // Validate at least one role is assigned
+        if (stage.Roles == null || !stage.Roles.Any())
+        {
+            throw new ValidationException("At least one role must be assigned to the stage");
+        }
+
         // Set a new id if not set
         if (stage.Id == Guid.Empty)
         {
@@ -60,13 +77,56 @@ public class WorkflowStageService : IWorkflowStageService
     /// <inheritdoc />
     public async Task DeleteAsync(Guid id)
     {
+        // Delete associated roles first
+        await _roleRepo.DeleteByWorkflowStageIdAsync(id).ConfigureAwait(false);
         await _repo.Delete(id).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task DeleteAsync(WorkflowStage stage)
     {
+        // Delete associated roles first
+        await _roleRepo.DeleteByWorkflowStageIdAsync(stage.Id).ConfigureAwait(false);
         await _repo.Delete(stage).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Assigns roles to a workflow stage
+    /// </summary>
+    /// <param name="stageId">The stage id</param>
+    /// <param name="roleIds">The role ids to assign</param>
+    public async Task AssignRolesAsync(Guid stageId, IEnumerable<string> roleIds)
+    {
+        if (roleIds == null || !roleIds.Any())
+        {
+            throw new ValidationException("At least one role must be assigned to the stage");
+        }
+
+        // Remove existing role assignments
+        await _roleRepo.DeleteByWorkflowStageIdAsync(stageId).ConfigureAwait(false);
+
+        // Add new role assignments
+        foreach (var roleId in roleIds)
+        {
+            var stageRole = new WorkflowStageRole
+            {
+                Id = Guid.NewGuid(),
+                WorkflowStageId = stageId,
+                RoleId = roleId
+            };
+            await _roleRepo.SaveAsync(stageRole).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Gets the roles assigned to a workflow stage
+    /// </summary>
+    /// <param name="stageId">The stage id</param>
+    /// <returns>The assigned role ids</returns>
+    public async Task<IEnumerable<string>> GetStageRolesAsync(Guid stageId)
+    {
+        var stageRoles = await _roleRepo.GetByWorkflowStageIdAsync(stageId).ConfigureAwait(false);
+        return stageRoles.Select(sr => sr.RoleId);
     }
 
     /// <inheritdoc />
