@@ -39,6 +39,7 @@ piranha.workflowedit = new Vue({
                     title: stage.title,
                     description: stage.description,
                     sortOrder: stage.sortOrder, // Preserve sort order from API
+                    color: stage.color || "#cccccc", // Default color if not set
                     roleIds: (stage.roles || []).map(function(role) {
                         return role.roleId;
                     }) || [] // Ensure this is always an array
@@ -169,39 +170,67 @@ piranha.workflowedit = new Vue({
                     "allowInsert": false,
                 });
 
-                // Define the Node template
+                // Node template: both shapes are Rectangles, with matching rounded corners
                 this.goJsDiagram.nodeTemplate =
                     $go(go.Node, "Auto",
-                        { 
-                            locationSpot: go.Spot.Center,
-                            fromSpot: go.Spot.RightCenter, 
-                            toSpot: go.Spot.LeftCenter,     
-                            selectionObjectName: "PANEL",
-                            toolTip: $go(go.Adornment, "Auto",
-                                      $go(go.TextBlock, { margin: 4 }, new go.Binding("text", "description"))
-                                    )
-                        },
-                        new go.Binding("layerName", "isPublished", function(is) { return is ? "Foreground" : ""; }),
-                        $go(go.Shape, "RoundedRectangle",
-                            { fill: "white", stroke: "#BBB", strokeWidth: 1, portId: "" },
-                            new go.Binding("fill", "isPublished", function(is) { return is ? "#E6FFED" : "#FFFFFF"; }),
-                            new go.Binding("stroke", "isPublished", function(is) { return is ? "#4CAF50" : "#BBB"; }),
-                            new go.Binding("strokeWidth", "isPublished", function(is) { return is ? 2 : 1; })
-                        ),
-                        $go(go.Panel, "Vertical", { margin: 10, defaultAlignment: go.Spot.Left },
-                            $go(go.TextBlock,
-                                { font: "bold 10pt sans-serif", stroke: "#333", margin: new go.Margin(0, 0, 4, 0) },
-                                new go.Binding("text", "title")
+                        $go(go.Panel, "Table",
+                            { defaultAlignment: go.Spot.Left, margin: 0 },
+                            // Left color bar with rounded top-left and bottom-left corners
+                            $go(go.Shape, "Rectangle",
+                                {
+                                    row: 0, column: 0,
+                                    width: 12,
+                                    stretch: go.GraphObject.Vertical,
+                                    fill: "#cccccc",
+                                    stroke: null,
+                                    minSize: new go.Size(12, 40),
+                                    maxSize: new go.Size(12, NaN),
+                                    margin: 0,
+                                    // Only round top-left and bottom-left corners
+                                    parameter1: 0,
+                                    geometryString: "F M0,0 H12 Q12,0 12,8 V72 Q12,80 0,80 H0 Q0,80 0,72 V8 Q0,0 0,0 Z"
+                                },
+                                new go.Binding("fill", "color"),
+                                // Use a custom geometry for rounded left corners
+                                {
+                                    // This geometryString is for a rectangle with top-left and bottom-left corners rounded (radius 8)
+                                    geometryString: "F M12,0 Q0,0 0,8 V72 Q0,80 12,80 H12 V0 Z"
+                                }
                             ),
-                            $go(go.TextBlock,
-                                { font: "9pt sans-serif", stroke: "#555", wrap: go.TextBlock.WrapDesiredSize, width: 130 },
-                                new go.Binding("text", "description", function(d) { 
-                                    return d ? (d.length > 50 ? d.substring(0, 50) + '...' : d) : '';
-                                })
+                            // Main node shape and content: Rectangle with rounded top-right and bottom-right corners
+                            $go(go.Panel, "Auto",
+                                { row: 0, column: 1 },
+                                $go(go.Shape, "Rectangle",
+                                    {
+                                        fill: "white",
+                                        stroke: "#BBB",
+                                        strokeWidth: 1,
+                                        minSize: new go.Size(120, 40),
+                                        // Only round top-right and bottom-right corners (radius 8)
+                                        parameter1: 0,
+                                        geometryString: "F M0,0 H108 Q120,0 120,8 V72 Q120,80 108,80 H0 Q0,80 0,72 V8 Q0,0 0,0 Z"
+                                }
+                            ),
+                            $go(go.Panel, "Vertical", { margin: 10, defaultAlignment: go.Spot.Left },
+                                $go(go.TextBlock,
+                                    { font: "bold 10pt sans-serif", stroke: "#333", margin: new go.Margin(0, 0, 4, 0) },
+                                    new go.Binding("text", "title")
+                                ),
+                                $go(go.TextBlock,
+                                    { font: "9pt sans-serif", stroke: "#555", wrap: go.TextBlock.WrapDesiredSize, width: 130 },
+                                    new go.Binding("text", "description", function(d) { 
+                                        return d ? (d.length > 50 ? d.substring(0, 50) + '...' : d) : '';
+                                    })
+                                )
                             )
                         )
+                        ),
+                        {
+                            toolTip: $go(go.Adornment, "Auto",
+                                $go(go.TextBlock, { margin: 4 }, new go.Binding("text", "description"))
+                            )
+                        }
                     );
-
                 // Define the Link template
                 this.goJsDiagram.linkTemplate =
                     $go(go.Link,
@@ -281,15 +310,14 @@ piranha.workflowedit = new Vue({
                 
                 // Create node data array
                 const nodeDataArray = [];
-                
-                // Use forEach instead of map for better error handling
                 this.stages.forEach(stage => {
                     if (stage && stage.id) {
                         nodeDataArray.push({
                             key: stage.id,
                             title: stage.title || "Untitled stage",
                             description: stage.description || "",
-                            isPublished: false // No published info in edit mode
+                            isPublished: false, // No published info in edit mode
+                            color: stage.color || "#cccccc"
                         });
                     } else {
                         console.warn("GoJS: Skipping invalid stage:", stage);
@@ -400,6 +428,7 @@ piranha.workflowedit = new Vue({
                 title: "Draft", 
                 description: "Initial draft stage",
                 sortOrder: 1, 
+                color: "#cccccc",
                 roleIds: []
             });
             
@@ -408,6 +437,7 @@ piranha.workflowedit = new Vue({
                 title: "Review", 
                 description: "Content review stage",
                 sortOrder: 2, 
+                color: "#cccccc",
                 roleIds: []
             });
             
@@ -416,6 +446,7 @@ piranha.workflowedit = new Vue({
                 title: "Published", 
                 description: "Final published stage",
                 sortOrder: 3, 
+                color: "#cccccc",
                 roleIds: []
             });
             
@@ -485,6 +516,7 @@ piranha.workflowedit = new Vue({
                         title: stage.title,
                         description: stage.description,
                         sortOrder: index + 1, // Update sort order based on current position
+                        color: stage.color || "#cccccc",
                         roles: (stage.roleIds || []).map(function(roleId) {
                             return {
                                 roleId: roleId
@@ -553,6 +585,7 @@ piranha.workflowedit = new Vue({
                 title: "", 
                 description: "",
                 sortOrder: this.stages.length + 1, 
+                color: "#cccccc",
                 roleIds: []
             });
             
@@ -657,6 +690,13 @@ piranha.workflowedit = new Vue({
         truncateDescription: function(text, maxLength) {
             if (!text) return '';
             return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        },
+        onStageColorChange: function(stage, event) {
+            stage.color = event.target.value;
+            // Update diagram only after color is confirmed (on change)
+            this.$nextTick(() => {
+                this.updateGoJsModel();
+            });
         }
     },
     computed: {

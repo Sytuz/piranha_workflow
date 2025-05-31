@@ -62,6 +62,133 @@
             text-align: center;
             color: #6c757d;
         }
+
+        /* Color picker styles */
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-picker-input {
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            border: 1px solid #dee2e6;
+            transition: border-color 0.2s;
+        }
+        .color-picker-input:focus {
+            outline: none;
+            border-color: #80bdff;
+        }
+        .color-picker-hex {
+            font-family: monospace;
+            font-size: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.25rem;
+            border: 1px solid #dee2e6;
+            padding: 0.25rem 0.5rem;
+            color: #333;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .stage-color-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 28px;
+            min-width: 0;
+            height: 100%;
+            border-radius: 0.25rem 0 0 0.25rem;
+            background: var(--stage-color, #cccccc);
+            box-shadow: 0 0 2px rgba(0,0,0,0.06);
+            z-index: 2;
+            transition: background 0.2s;
+        }
+        .sortable-item {
+            display: flex;
+            align-items: stretch;
+            margin-bottom: 1.5rem;
+            background: #fff;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            border: 1px solid #dee2e6;
+            position: relative;
+            padding-left: 28px; /* Match color bar width */
+            overflow: hidden;
+        }
+        .actions-move {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0.5rem 0.5rem 0 0.5rem;
+            min-width: 40px;
+            z-index: 3;
+        }
+        .color-picker-circle {
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 50%;
+            border: 2px solid #dee2e6;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            cursor: pointer;
+            padding: 0;
+            background: none;
+            transition: border-color 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            /* Remove default inner square for color input */
+            overflow: hidden;
+        }
+        .color-picker-circle::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: 50%;
+        }
+        .color-picker-circle::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .color-picker-circle::-moz-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .color-picker-circle::-ms-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .color-picker-circle:focus {
+            outline: none;
+            border-color: #80bdff;
+        }
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-picker-hex {
+            font-family: monospace;
+            font-size: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.25rem;
+            border: 1px solid #dee2e6;
+            padding: 0.25rem 0.5rem;
+            color: #333;
+            min-width: 80px;
+            text-align: center;
+        }
+        .actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-end;
+            padding: 0.5rem;
+            min-width: 40px;
+        }
+        @@media (max-width: 600px) {
+            .sortable-item { flex-direction: column; }
+            .stage-color-bar { height: 16px; width: 100%; min-width: 0; border-radius: 8px 8px 0 0; margin-right: 0; margin-bottom: 0.5rem; }
+        }
     </style>
 
     <script>
@@ -179,6 +306,8 @@
             <div class="card-body">
                 <div class="sortable">
                     <div v-for="(stage, index) in stages" class="sortable-item">
+                        <!-- Colored gradient bar as left border -->
+                        <div class="stage-color-bar" :style="{'--stage-color': stage.color || '#cccccc'}"></div>
                         <div class="actions-move">
                             <button v-on:click.prevent="moveStageUp(index)" class="btn btn-sm" :disabled="index === 0">
                                 <i class="fas fa-chevron-up"></i>
@@ -187,12 +316,32 @@
                                 <i class="fas fa-chevron-down"></i>
                             </button>
                         </div>
-                        <div class="content">
+                        <div class="content" style="flex:1;">
                             <div class="form-group">
                                 <input v-model="stage.title" type="text" class="form-control" placeholder="@Localizer.Workflow["Stage name"]">
                             </div>
                             <div class="form-group">
                                 <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>@Localizer.Workflow["Stage Color"]</label>
+                                <div class="input-group color-picker-group align-items-center" style="max-width: 220px;">
+                                    <input
+                                        type="color"
+                                        :value="stage.color"
+                                        class="color-picker-circle"
+                                        v-on:change="onStageColorChange(stage, $event)"
+                                        style="background: none;"
+                                    />
+                                    <input
+                                        type="text"
+                                        class="form-control color-picker-hex"
+                                        :value="stage.color"
+                                        readonly
+                                        tabindex="-1"
+                                    />
+                                </div>
+                                <small class="form-text text-muted">@Localizer.Workflow["Choose a color for this stage (optional)"]</small>
                             </div>
                             <div class="form-group">
                                 <label>@Localizer.Workflow["Authorized Roles"]</label>
@@ -203,7 +352,7 @@
                                                :id="'role-' + stage.id + '-' + role.id"
                                                :value="role.id" 
                                                :checked="stage.roleIds && stage.roleIds.includes(role.id)"
-                                               @@change="toggleStageRole(stage, role.id, $event)">
+                                               v-on:change="toggleStageRole(stage, role.id, $event)">
                                         <label class="form-check-label" :for="'role-' + stage.id + '-' + role.id">
                                             {{ role.name }}
                                         </label>
@@ -219,7 +368,7 @@
                                                type="checkbox" 
                                                :id="'relation-' + stage.id + '-' + targetStage.id"
                                                :checked="canTransitionTo(stage.id, targetStage.id)"
-                                               @@change="toggleStageRelation(stage.id, targetStage.id, $event)">
+                                               v-on:change="toggleStageRelation(stage.id, targetStage.id, $event)">
                                         <label class="form-check-label" :for="'relation-' + stage.id + '-' + targetStage.id">
                                             → {{ targetStage.title }}
                                         </label>
