@@ -2,6 +2,12 @@
     piranha, go, console
 */
 
+// Prevent GoJS global redefinition warning
+if (typeof window.go !== "undefined") {
+    // Optionally log a warning, but do not redefine or reload GoJS
+    console.warn("GoJS global object already defined. Skipping redefinition.");
+}
+
 piranha.workflowedit = new Vue({
     el: "#workflowedit",
     data: {
