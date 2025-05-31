@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Piranha.Models;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
-using System.ComponentModel.DataAnnotations; // Add this using directive
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace Piranha.Manager.Controllers
 {
@@ -19,14 +20,17 @@ namespace Piranha.Manager.Controllers
     public class WorkflowApiController : Controller
     {
         private readonly WorkflowService _service;
+        private readonly IApi _api;
 
         /// <summary>
         /// Default constructor.
         /// </summary>
         /// <param name="service">The workflow service</param>
-        public WorkflowApiController(WorkflowService service)
+        /// <param name="api">The main API</param>
+        public WorkflowApiController(WorkflowService service, IApi api)
         {
             _service = service;
+            _api = api;
         }
 
         /// <summary>

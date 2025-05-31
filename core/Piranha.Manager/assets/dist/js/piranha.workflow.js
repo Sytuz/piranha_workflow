@@ -420,13 +420,3 @@ piranha.workflow = new Vue({
         // window.removeEventListener('resize', this.handleResize);
     }
 });
-
-// Register utils if needed
-if (!piranha.utils) {
-    piranha.utils = {
-        generateId: function () {
-            return Math.random().toString(36).substring(2, 15) +
-                Math.random().toString(36).substring(2, 15);
-        }
-    };
-}

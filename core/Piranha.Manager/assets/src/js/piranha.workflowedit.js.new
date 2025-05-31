@@ -89,7 +89,7 @@ piranha.workflowedit = new Vue({
         initGoJsDiagram: function() {
             console.log("Initializing GoJS diagram...");
             
-            // First check if GoJS is available globally
+            // First check if GoJS is available
             if (typeof go === 'undefined') {
                 console.error("GoJS library is not loaded. Will try again later.");
                 return false;
@@ -98,49 +98,37 @@ piranha.workflowedit = new Vue({
             // Get diagram div by ID and ref (if available)
             let diagramDiv = null;
             
-            // Try multiple methods to get the diagram div, in order of reliability
+            // Try getting div by Vue ref first (more reliable)
             if (this.$refs && this.$refs.workflowDiagramDiv) {
                 diagramDiv = this.$refs.workflowDiagramDiv;
                 console.log("GoJS: Found diagram div via Vue $refs");
             } else {
+                // Fallback to getElementById
                 diagramDiv = document.getElementById('workflowDiagramDiv');
                 if (diagramDiv) {
                     console.log("GoJS: Found diagram div via getElementById");
                 } else {
-                    // Wait longer for Vue to finish rendering
                     console.error("GoJS: Diagram div element not found in DOM");
                     return false;
                 }
             }
 
-            // Cleanup any existing diagram
-            if (this.goJsDiagram) {
+            // Reuse existing diagram if attached to current div
+            if (this.goJsDiagram && this.goJsDiagram.div === diagramDiv) {
+                console.log("GoJS: Diagram already initialized for this div");
+                return true;
+            } else if (this.goJsDiagram) {
+                // Clean up if attached to an old div
                 console.log("GoJS: Cleaning up old diagram instance");
-                try {
-                    // Make sure we're really cleaning up
-                    if (this.goJsDiagram.div) {
-                        this.goJsDiagram.div = null;
-                    }
-                    this.goJsDiagram = null;
-                } catch (e) {
-                    console.error("GoJS: Error cleaning up old diagram:", e);
-                }
+                this.goJsDiagram.div = null;
+                this.goJsDiagram = null;
             }
 
-            // Ensure the diagram container is properly sized and empty
-            if (diagramDiv) {
-                diagramDiv.innerHTML = ''; // Clear any content
+            // Force height if not applied in time
+            if (diagramDiv.offsetHeight < 50) {
+                console.log("GoJS: Diagram div has insufficient height. Forcing to 400px");
                 diagramDiv.style.height = "400px";
                 diagramDiv.style.minHeight = "400px";
-                diagramDiv.style.width = "100%";
-                diagramDiv.style.position = "relative";
-                diagramDiv.style.display = "block";
-                
-                // Force a reflow to ensure CSS is applied
-                void diagramDiv.offsetHeight;
-            } else {
-                console.error("GoJS: No diagram div available after checks. Diagram initialization will fail.");
-                return false;
             }
 
             console.log("GoJS: Creating new diagram instance. Div height:", diagramDiv.offsetHeight);
@@ -232,105 +220,42 @@ piranha.workflowedit = new Vue({
                 return false;
             }
             
-            // Try to initialize if not already done
+            // Make sure diagram is initialized
             if (!this.goJsDiagram || !this.diagramInitialized) {
                 console.log("GoJS: Diagram not initialized yet, attempting initialization");
-                
-                // Reset initialization attempts to make sure we try again with a fresh counter
-                this.initAttempts = 0;
-                
-                // Try to initialize diagram
                 if (!this.initGoJsDiagram()) {
-                    console.error("GoJS updateGoJsModel: Diagram initialization failed. Will retry later.");
-                    // Schedule another initialization attempt
-                    setTimeout(() => this.attemptDiagramInitialization(), 500);
+                    console.error("GoJS: Failed to initialize diagram. Cannot update model.");
                     return false;
                 }
             }
 
-            // Double-check that diagram is available
-            if (!this.goJsDiagram) {
-                console.error("GoJS updateGoJsModel: Diagram instance is not available. initGoJsDiagram might have failed or was not called when the div was ready.");
-                return false;
-            }
-
-            // Handle empty stages case
             if (!this.stages || this.stages.length === 0) {
                 console.log("GoJS: No stages to display, clearing diagram");
-                try {
-                    // Create empty model
-                    const emptyModel = new go.GraphLinksModel([], []);
-                    this.goJsDiagram.model = emptyModel;
+                if (this.goJsDiagram) {
+                    this.goJsDiagram.model = new go.GraphLinksModel([], []);
                     this.goJsDiagram.requestUpdate();
-                } catch (e) {
-                    console.error("GoJS: Error clearing diagram:", e);
                 }
                 return true;
             }
 
             try {
-                // Debug log about diagram
-                console.log("GoJS: Diagram div element:", this.goJsDiagram.div);
                 console.log("GoJS: Building node data array with", this.stages.length, "stages");
-                
-                // Create node data array
-                const nodeDataArray = [];
-                
-                // Use forEach instead of map for better error handling
-                this.stages.forEach(stage => {
-                    if (stage && stage.id) {
-                        nodeDataArray.push({
-                            key: stage.id,
-                            title: stage.title || "Untitled stage",
-                            description: stage.description || "",
-                            isPublished: false // No published info in edit mode
-                        });
-                    } else {
-                        console.warn("GoJS: Skipping invalid stage:", stage);
-                    }
-                });
+                const nodeDataArray = this.stages.map(stage => ({
+                    key: stage.id,
+                    title: stage.title || "Untitled stage",
+                    description: stage.description,
+                    isPublished: false // No published info in edit mode
+                }));
 
                 console.log("GoJS: Building link data array with", this.relations.length, "relations");
-                const linkDataArray = [];
-                
-                // Use forEach instead of map for better error handling
-                this.relations.forEach(rel => {
-                    if (rel && rel.sourceStageId && rel.targetStageId) {
-                        linkDataArray.push({
-                            from: rel.sourceStageId,
-                            to: rel.targetStageId
-                        });
-                    } else {
-                        console.warn("GoJS: Skipping invalid relation:", rel);
-                    }
-                });
+                const linkDataArray = this.relations.map(rel => ({
+                    from: rel.sourceStageId,
+                    to: rel.targetStageId
+                }));
 
                 console.log("GoJS: Setting model with", nodeDataArray.length, "nodes and", linkDataArray.length, "links");
-                
-                // Create new model
-                const newModel = new go.GraphLinksModel();
-                
-                // Set key properties for nodes and links
-                newModel.nodeKeyProperty = "key";
-                newModel.linkFromKeyProperty = "from";
-                newModel.linkToKeyProperty = "to";
-                
-                // Add data
-                newModel.nodeDataArray = nodeDataArray;
-                newModel.linkDataArray = linkDataArray;
-                
-                // Update diagram with new model
-                this.goJsDiagram.model = newModel;
-                
-                // Request update and redraw
+                this.goJsDiagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
                 this.goJsDiagram.requestUpdate();
-                
-                // Force layout
-                if (this.goJsDiagram.layout) {
-                    this.goJsDiagram.layout.invalidateLayout();
-                    this.goJsDiagram.layoutDiagram();
-                }
-                
                 return true;
             } catch (e) {
                 console.error("GoJS: Error updating model:", e);

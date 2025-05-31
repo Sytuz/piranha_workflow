@@ -48,6 +48,7 @@ namespace Piranha.Repositories
 
                 // Get stages
                 model.Stages = await _db.WorkflowStages
+                    .Include(s => s.Roles)
                     .Where(s => s.WorkflowId == workflow.Id)
                     .OrderBy(s => s.SortOrder)
                     .Select(s => new Models.WorkflowStage
@@ -58,7 +59,13 @@ namespace Piranha.Repositories
                         Description = s.Description,
                         SortOrder = s.SortOrder,
                         IsPublished = s.IsPublished,
-                        Color = s.Color
+                        Color = s.Color,
+                        Roles = s.Roles.Select(r => new Models.WorkflowStageRole
+                        {
+                            Id = r.Id,
+                            WorkflowStageId = r.WorkflowStageId,
+                            RoleId = r.RoleId
+                        }).ToList()
                     })
                     .ToListAsync();
 
@@ -105,6 +112,7 @@ namespace Piranha.Repositories
 
                 // Get stages
                 model.Stages = await _db.WorkflowStages
+                    .Include(s => s.Roles)
                     .Where(s => s.WorkflowId == id)
                     .OrderBy(s => s.SortOrder)
                     .Select(s => new Models.WorkflowStage
@@ -115,7 +123,13 @@ namespace Piranha.Repositories
                         Description = s.Description,
                         SortOrder = s.SortOrder,
                         IsPublished = s.IsPublished,
-                        Color = s.Color
+                        Color = s.Color,
+                        Roles = s.Roles.Select(r => new Models.WorkflowStageRole
+                        {
+                            Id = r.Id,
+                            WorkflowStageId = r.WorkflowStageId,
+                            RoleId = r.RoleId
+                        }).ToList()
                     })
                     .ToListAsync();
 
@@ -161,8 +175,6 @@ namespace Piranha.Repositories
             workflow.IsEnabled = model.IsEnabled;
             workflow.LastModified = DateTime.Now;
 
-            await _db.SaveChangesAsync();
-
             // Save stages
             foreach (var stage in model.Stages)
             {
@@ -185,6 +197,34 @@ namespace Piranha.Repositories
                 dbStage.SortOrder = stage.SortOrder;
                 dbStage.IsPublished = stage.IsPublished;
                 dbStage.Color = stage.Color;
+
+                // Handle roles - remove existing and add new ones if provided
+                if (stage.Roles != null)
+                {
+                    // Remove existing roles using direct query to avoid tracking issues
+                    var existingRoles = await _db.WorkflowStageRoles
+                        .Where(r => r.WorkflowStageId == dbStage.Id)
+                        .ToListAsync();
+                    
+                    if (existingRoles.Any())
+                    {
+                        _db.WorkflowStageRoles.RemoveRange(existingRoles);
+                    }
+
+                    // Add new roles
+                    foreach (var role in stage.Roles)
+                    {
+                        var dbRole = new Data.WorkflowStageRole
+                        {
+                            Id = role.Id != Guid.Empty ? role.Id : Guid.NewGuid(),
+                            WorkflowStageId = dbStage.Id,
+                            RoleId = role.RoleId,
+                            Created = DateTime.Now,
+                            LastModified = DateTime.Now
+                        };
+                        await _db.WorkflowStageRoles.AddAsync(dbRole);
+                    }
+                }
             }
 
             // Delete removed stages
@@ -199,8 +239,6 @@ namespace Piranha.Repositories
                     _db.WorkflowStages.Remove(oldStage);
                 }
             }
-
-            await _db.SaveChangesAsync();
 
             // Save relations
             foreach (var relation in model.Relations)

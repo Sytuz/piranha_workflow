@@ -45,4 +45,18 @@ public interface IWorkflowStageService
     /// <param name="workflowId">The workflow id</param>
     /// <param name="stageIds">The array of stage ids in the desired order</param>
     Task ReorderAsync(Guid workflowId, Guid[] stageIds);
+
+    /// <summary>
+    /// Assigns roles to a workflow stage.
+    /// </summary>
+    /// <param name="stageId">The stage id</param>
+    /// <param name="roleIds">The role ids to assign</param>
+    Task AssignRolesAsync(Guid stageId, IEnumerable<string> roleIds);
+
+    /// <summary>
+    /// Gets the roles assigned to a workflow stage.
+    /// </summary>
+    /// <param name="stageId">The stage id</param>
+    /// <returns>The assigned role ids</returns>
+    Task<IEnumerable<string>> GetStageRolesAsync(Guid stageId);
 }
