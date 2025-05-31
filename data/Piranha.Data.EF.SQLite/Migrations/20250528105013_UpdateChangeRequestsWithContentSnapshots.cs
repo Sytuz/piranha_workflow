@@ -10,13 +10,20 @@ namespace Piranha.Data.EF.SQLite.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-
+            migrationBuilder.AddColumn<string>(
+                name: "ContentSnapshot",
+                table: "Piranha_ChangeRequests",
+                type: "TEXT",
+                nullable: false,
+                defaultValue: "");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-
+            migrationBuilder.DropColumn(
+                name: "ContentSnapshot",
+                table: "Piranha_ChangeRequests");
         }
     }
 }
