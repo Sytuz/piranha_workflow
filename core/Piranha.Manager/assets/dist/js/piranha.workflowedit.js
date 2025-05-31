@@ -38,11 +38,12 @@ piranha.workflowedit = new Vue({
                     id: stage.id,
                     title: stage.title,
                     description: stage.description,
-                    sortOrder: stage.sortOrder, // Preserve sort order from API
-                    color: stage.color || "#cccccc", // Default color if not set
+                    sortOrder: stage.sortOrder,
+                    color: stage.color || "#cccccc",
                     roleIds: (stage.roles || []).map(function(role) {
                         return role.roleId;
-                    }) || [] // Ensure this is always an array
+                    }) || [],
+                    isImmutable: !!stage.isImmutable // <-- Add isImmutable
                 };
             });
             
@@ -422,34 +423,6 @@ piranha.workflowedit = new Vue({
             this.stages = [];
             this.relations = [];
             
-            // Add default stages for a new workflow
-            this.stages.push({
-                id: piranha.utils.generateId(),
-                title: "Draft", 
-                description: "Initial draft stage",
-                sortOrder: 1, 
-                color: "#cccccc",
-                roleIds: []
-            });
-            
-            this.stages.push({
-                id: piranha.utils.generateId(),
-                title: "Review", 
-                description: "Content review stage",
-                sortOrder: 2, 
-                color: "#cccccc",
-                roleIds: []
-            });
-            
-            this.stages.push({
-                id: piranha.utils.generateId(),
-                title: "Published", 
-                description: "Final published stage",
-                sortOrder: 3, 
-                color: "#cccccc",
-                roleIds: []
-            });
-            
             this.loading = false;
             
             // Load available roles
@@ -580,15 +553,24 @@ piranha.workflowedit = new Vue({
         },
         
         addStage: function () {
+            // Only allow adding if last stage is not immutable or no stages exist
+            if (this.stages.length > 0 && this.stages[this.stages.length - 1].isImmutable) {
+                piranha.notifications.push({
+                    body: "You cannot add a stage after an immutable stage.",
+                    type: "danger",
+                    hide: true
+                });
+                return;
+            }
             this.stages.push({
                 id: piranha.utils.generateId(),
                 title: "", 
                 description: "",
                 sortOrder: this.stages.length + 1, 
                 color: "#cccccc",
-                roleIds: []
+                roleIds: [],
+                isImmutable: false // New stages are not immutable
             });
-            
             // Update diagram
             this.$nextTick(() => {
                 this.updateGoJsModel();
@@ -596,8 +578,16 @@ piranha.workflowedit = new Vue({
         },
         
         removeStage: function (index) {
+            console.log(this.stages);
             const stageToRemove = this.stages[index];
-            
+            if (stageToRemove.isImmutable) {
+                piranha.notifications.push({
+                    body: "This stage cannot be deleted.",
+                    type: "danger",
+                    hide: true
+                });
+                return;
+            }
             // Remove the stage
             this.stages.splice(index, 1);
             
@@ -613,11 +603,13 @@ piranha.workflowedit = new Vue({
         },
         
         moveStageUp: function(index) {
-            if (index > 0) {
+            if (
+                index > 0 &&
+                !this.stages[index].isImmutable &&
+                !this.stages[index - 1].isImmutable
+            ) {
                 const stage = this.stages.splice(index, 1)[0];
                 this.stages.splice(index - 1, 0, stage);
-                
-                // Update diagram
                 this.$nextTick(() => {
                     this.updateGoJsModel();
                 });
@@ -625,11 +617,13 @@ piranha.workflowedit = new Vue({
         },
         
         moveStageDown: function(index) {
-            if (index < this.stages.length - 1) {
+            if (
+                index < this.stages.length - 1 &&
+                !this.stages[index].isImmutable &&
+                !this.stages[index + 1].isImmutable
+            ) {
                 const stage = this.stages.splice(index, 1)[0];
                 this.stages.splice(index + 1, 0, stage);
-                
-                // Update diagram
                 this.$nextTick(() => {
                     this.updateGoJsModel();
                 });
@@ -648,7 +642,36 @@ piranha.workflowedit = new Vue({
             });
         },
         
+        isRoleEditingDisabled: function(stage) {
+            if (!stage.isImmutable) {
+                return false; // Not immutable, so roles are editable
+            }
+            // Stage is immutable. Check if it's the "Draft" stage (assumed to be the first stage).
+            const isDraftStage = this.stages.length > 0 && this.stages[0].id === stage.id;
+            if (isDraftStage) {
+                return false; // It's the "Draft" stage, roles are editable even if stage is immutable.
+            }
+            return true; // It's an immutable stage other than "Draft", so roles are not editable.
+        },
+        
         toggleStageRole: function(stage, roleId, event) {
+            if (this.isRoleEditingDisabled(stage)) {
+                event.preventDefault(); // Prevent checkbox state change
+                // Ensure the visual state of the checkbox matches the actual state
+                var checkbox = event.target;
+                var intendedState = stage.roleIds && stage.roleIds.includes(roleId);
+                if (checkbox.checked !== intendedState) {
+                    checkbox.checked = intendedState;
+                }
+                // Optionally, show a notification
+                // piranha.notifications.push({
+                //     body: "Roles for this immutable stage cannot be modified.",
+                //     type: "warning",
+                //     hide: true
+                // });
+                return;
+            }
+
             if (event.target.checked) {
                 // Add role
                 if (!stage.roleIds.includes(roleId)) {
@@ -661,8 +684,60 @@ piranha.workflowedit = new Vue({
                 });
             }
         },
+
+        selectAllRoles: function(stage) {
+            if (this.isRoleEditingDisabled(stage)) {
+                return;
+            }
+            var self = this;
+            this.availableRoles.forEach(function(role) {
+                if (!stage.roleIds.includes(role.id)) {
+                    stage.roleIds.push(role.id);
+                }
+            });
+        },
+
+        deselectAllRoles: function(stage) {
+            if (this.isRoleEditingDisabled(stage)) {
+                return;
+            }
+            stage.roleIds = [];
+        },
+
+        isRelationEditingDisabled: function(stage) {
+            if (!stage.isImmutable) {
+                return false; // Not immutable, so relations are editable
+            }
+            // Stage is immutable. Check if it's the "Draft" stage (assumed to be the first stage).
+            const isDraftStage = this.stages.length > 0 && this.stages[0].id === stage.id;
+            if (isDraftStage) {
+                return false; // It's the "Draft" stage, relations are editable even if stage is immutable.
+            }
+            return true; // It's an immutable stage other than "Draft", so relations are not editable.
+        },
         
         toggleStageRelation: function(sourceStageId, targetStageId, event) {
+            const sourceStage = this.stages.find(s => s.id === sourceStageId);
+
+            if (this.isRelationEditingDisabled(sourceStage)) {
+                event.preventDefault(); // Prevent checkbox state change
+                // Ensure the visual state of the checkbox matches the actual state if it was somehow changed
+                // This is a safeguard; Vue's :disabled binding should prevent this.
+                var checkbox = event.target;
+                var intendedState = this.canTransitionTo(sourceStageId, targetStageId);
+                if (checkbox.checked !== intendedState) {
+                    checkbox.checked = intendedState;
+                }
+
+                piranha.notifications.push({
+                    body: "Relations for this immutable stage cannot be modified.",
+                    type: "warning",
+                    hide: true
+                });
+                return;
+            }
+
+            // Proceed with logic if not disabled
             if (event.target.checked) {
                 // Add relation if it doesn't exist
                 if (!this.canTransitionTo(sourceStageId, targetStageId)) {
@@ -692,12 +767,15 @@ piranha.workflowedit = new Vue({
             return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
         },
         onStageColorChange: function(stage, event) {
+            if (stage.isImmutable) {
+                event.preventDefault();
+                return;
+            }
             stage.color = event.target.value;
-            // Update diagram only after color is confirmed (on change)
             this.$nextTick(() => {
                 this.updateGoJsModel();
             });
-        }
+        },
     },
     computed: {
         // Add computed properties to help with rendering

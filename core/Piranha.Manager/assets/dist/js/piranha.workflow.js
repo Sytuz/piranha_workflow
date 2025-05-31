@@ -84,11 +84,12 @@ piranha.workflow = new Vue({
             }
 
             console.log("GoJS init: Initializing new Diagram instance. Div height now:", this.$refs.goJsDiagramDiv.offsetHeight);
-            const $go = go.GraphObject.make; // Renamed to avoid conflict with jQuery's $
+            const $go = go.GraphObject.make;
 
+            // --- Begin: Use the same node template as workflowedit.js for color bar ---
             this.goJsDiagram = $go(go.Diagram, this.$refs.goJsDiagramDiv, {
                 initialContentAlignment: go.Spot.Center,
-                initialScale: 0.95, // Set initial zoom level
+                initialScale: 0.95,
                 layout: $go(go.LayeredDigraphLayout, { 
                     direction: 0, 
                     layerSpacing: 50,
@@ -102,36 +103,58 @@ piranha.workflow = new Vue({
                 "allowInsert": false,
             });
 
-            // Define the Node template
             this.goJsDiagram.nodeTemplate =
                 $go(go.Node, "Auto",
-                    { 
-                        locationSpot: go.Spot.Center,
-                        fromSpot: go.Spot.RightCenter, 
-                        toSpot: go.Spot.LeftCenter,     
-                        selectionObjectName: "PANEL",
-                        toolTip: $go(go.Adornment, "Auto",
-                                   $go(go.TextBlock, { margin: 4 }, new go.Binding("text", "description"))
-                                 )
-                    },
-                    new go.Binding("layerName", "isPublished", function(is) { return is ? "Foreground" : ""; }),
-                    $go(go.Shape, "RoundedRectangle",
-                        { fill: "white", stroke: "#BBB", strokeWidth: 1, portId: "" },
-                        new go.Binding("fill", "isPublished", function(is) { return is ? "#E6FFED" : "#FFFFFF"; }),
-                        new go.Binding("stroke", "isPublished", function(is) { return is ? "#4CAF50" : "#BBB"; }),
-                        new go.Binding("strokeWidth", "isPublished", function(is) { return is ? 2 : 1; })
-                    ),
-                    $go(go.Panel, "Vertical", { margin: 10, defaultAlignment: go.Spot.Left },
-                        $go(go.TextBlock,
-                            { font: "bold 10pt sans-serif", stroke: "#333", margin: new go.Margin(0, 0, 4, 0) },
-                            new go.Binding("text", "title")
+                    $go(go.Panel, "Table",
+                        { defaultAlignment: go.Spot.Left, margin: 0 },
+                        // Left color bar with rounded top-left and bottom-left corners
+                        $go(go.Shape, "Rectangle",
+                            {
+                                row: 0, column: 0,
+                                width: 12,
+                                stretch: go.GraphObject.Vertical,
+                                fill: "#cccccc",
+                                stroke: null,
+                                minSize: new go.Size(12, 40),
+                                maxSize: new go.Size(12, NaN),
+                                margin: 0,
+                                parameter1: 0,
+                                geometryString: "F M12,0 Q0,0 0,8 V72 Q0,80 12,80 H12 V0 Z"
+                            },
+                            new go.Binding("fill", "color")
                         ),
-                        $go(go.TextBlock,
-                            { font: "9pt sans-serif", stroke: "#555", wrap: go.TextBlock.WrapDesiredSize, width: 130 },
-                            new go.Binding("text", "description", function(d) { return piranha.workflow.truncateDescription(d, 50); })
+                        // Main node shape and content: Rectangle with rounded top-right and bottom-right corners
+                        $go(go.Panel, "Auto",
+                            { row: 0, column: 1 },
+                            $go(go.Shape, "Rectangle",
+                                {
+                                    fill: "white",
+                                    stroke: "#BBB",
+                                    strokeWidth: 1,
+                                    minSize: new go.Size(120, 40),
+                                    parameter1: 0,
+                                    geometryString: "F M0,0 H108 Q120,0 120,8 V72 Q120,80 108,80 H0 Q0,80 0,72 V8 Q0,0 0,0 Z"
+                                }
+                            ),
+                            $go(go.Panel, "Vertical", { margin: 10, defaultAlignment: go.Spot.Left },
+                                $go(go.TextBlock,
+                                    { font: "bold 10pt sans-serif", stroke: "#333", margin: new go.Margin(0, 0, 4, 0) },
+                                    new go.Binding("text", "title")
+                                ),
+                                $go(go.TextBlock,
+                                    { font: "9pt sans-serif", stroke: "#555", wrap: go.TextBlock.WrapDesiredSize, width: 130 },
+                                    new go.Binding("text", "description", function(d) { return piranha.workflow.truncateDescription(d, 50); })
+                                )
+                            )
                         )
-                    )
+                    ),
+                    {
+                        toolTip: $go(go.Adornment, "Auto",
+                            $go(go.TextBlock, { margin: 4 }, new go.Binding("text", "description"))
+                        )
+                    }
                 );
+            // --- End: Use the same node template as workflowedit.js for color bar ---
 
             // Define the Link template
             this.goJsDiagram.linkTemplate =
@@ -165,12 +188,15 @@ piranha.workflow = new Vue({
                 return;
             }
 
+            // --- Add color property to nodeDataArray ---
             const nodeDataArray = (this.selectedWorkflow.stages || []).map(stage => ({
                 key: stage.id,
                 title: stage.title,
                 description: stage.description,
                 isPublished: stage.isPublished,
+                color: stage.color || "#cccccc"
             }));
+            // --- End color property ---
 
             const linkDataArray = (this.selectedWorkflow.relations || []).map(rel => ({
                 from: rel.sourceStageId,

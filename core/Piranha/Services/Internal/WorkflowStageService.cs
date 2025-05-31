@@ -65,6 +65,10 @@ public class WorkflowStageService : IWorkflowStageService
             throw new ValidationException("At least one role must be assigned to the stage");
         }
 
+        // Prevent editing of immutable stages
+        if (stage.IsImmutable)
+            throw new ValidationException("Immutable stages cannot be edited.");
+
         // Set a new id if not set
         if (stage.Id == Guid.Empty)
         {
@@ -77,6 +81,10 @@ public class WorkflowStageService : IWorkflowStageService
     /// <inheritdoc />
     public async Task DeleteAsync(Guid id)
     {
+        var stage = await _repo.GetById(id).ConfigureAwait(false);
+        if (stage != null && stage.IsImmutable)
+            throw new ValidationException("Immutable stages cannot be deleted.");
+
         // Delete associated roles first
         await _roleRepo.DeleteByWorkflowStageIdAsync(id).ConfigureAwait(false);
         await _repo.Delete(id).ConfigureAwait(false);
@@ -85,6 +93,9 @@ public class WorkflowStageService : IWorkflowStageService
     /// <inheritdoc />
     public async Task DeleteAsync(WorkflowStage stage)
     {
+        if (stage.IsImmutable)
+            throw new ValidationException("Immutable stages cannot be deleted.");
+
         // Delete associated roles first
         await _roleRepo.DeleteByWorkflowStageIdAsync(stage.Id).ConfigureAwait(false);
         await _repo.Delete(stage).ConfigureAwait(false);
@@ -133,6 +144,9 @@ public class WorkflowStageService : IWorkflowStageService
     public async Task ReorderAsync(Guid workflowId, Guid[] stageIds)
     {
         var stages = await _repo.GetByWorkflowId(workflowId).ConfigureAwait(false);
+        if (stages.Any(s => s.IsImmutable && Array.IndexOf(stageIds, s.Id) != s.SortOrder - 1))
+            throw new ValidationException("Immutable stages cannot be reordered.");
+
         var ordered = new List<WorkflowStage>();
 
         foreach (var id in stageIds)

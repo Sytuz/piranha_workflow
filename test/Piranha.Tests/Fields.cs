@@ -969,7 +969,7 @@ public class Fields : BaseTests
             new SiteTypeRepository(db),            new WorkflowRepository(db),
             new WorkflowStageRepository(db),
             new WorkflowStageRelationRepository(db),
-            new WorkflowStageRoleRepository(db)
+            new WorkflowStageRoleRepository(db),
             new ChangeRequestRepository(db)
         );
     }

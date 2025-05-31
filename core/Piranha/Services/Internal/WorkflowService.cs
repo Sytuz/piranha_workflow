@@ -49,7 +49,44 @@ public class WorkflowService : IWorkflowService
         {
             model.Id = Guid.NewGuid();
             model.Created = DateTime.Now;
+
+            // If this is a new workflow, ensure it has the default two immutable stages
+            var draftStage = new WorkflowStage
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = model.Id,
+                Title = "Draft",
+                Description = "Initial content creation",
+                SortOrder = 1,
+                IsPublished = false,
+                Color = "#c8c8c8",
+                IsImmutable = true
+            };
+            var publishedStage = new WorkflowStage
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = model.Id,
+                Title = "Published",
+                Description = "Final published stage",
+                SortOrder = 2,
+                IsPublished = true,
+                Color = "#4CAF50",
+                IsImmutable = true
+            };
+
+            model.Stages = new List<WorkflowStage> { draftStage, publishedStage };
+            model.Relations = new List<WorkflowStageRelation>
+            {
+                new WorkflowStageRelation
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = model.Id,
+                    SourceStageId = draftStage.Id,
+                    TargetStageId = publishedStage.Id
+                }
+            };
         }
+
         model.LastModified = DateTime.Now;
 
         // If this workflow is set as default, unset any other default workflow
@@ -187,7 +224,7 @@ public class WorkflowService : IWorkflowService
             workflow.IsDefault = true;
             workflow.IsEnabled = true; // Automatically enable the first workflow
         }
-
+    
         // Add standard stages
         workflow.Stages = new List<WorkflowStage>
         {
@@ -198,7 +235,9 @@ public class WorkflowService : IWorkflowService
                 Title = "Draft",
                 Description = "Initial content creation",
                 SortOrder = 1,
-                IsPublished = false
+                IsPublished = false,
+                Color = "#c8c8c8",
+                IsImmutable = true
             },
             new WorkflowStage
             {
@@ -207,7 +246,8 @@ public class WorkflowService : IWorkflowService
                 Title = "Review",
                 Description = "Content under review",
                 SortOrder = 2,
-                IsPublished = false
+                IsPublished = false,
+                IsImmutable = false // Explicitly set
             },
             new WorkflowStage
             {
@@ -216,7 +256,8 @@ public class WorkflowService : IWorkflowService
                 Title = "Legal Review",
                 Description = "Content under legal review",
                 SortOrder = 3,
-                IsPublished = true
+                IsPublished = false,
+                IsImmutable = false // Explicitly set
             },
             new WorkflowStage
             {
@@ -225,40 +266,59 @@ public class WorkflowService : IWorkflowService
                 Title = "Approved",
                 Description = "Content ready for publishing",
                 SortOrder = 4,
-                IsPublished = true
+                IsPublished = false,
+                IsImmutable = false // Explicitly set
+            },
+            new WorkflowStage
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = workflow.Id,
+                Title = "Published",
+                Description = "Final published stage",
+                SortOrder = 5,
+                IsPublished = true,
+                Color = "#4CAF50",
+                IsImmutable = true
             }
         };
 
-        // Add standard relations
+        // Add standard relations (no Draft→Published, but Approved→Published)
         workflow.Relations = new List<WorkflowStageRelation>
         {
             new WorkflowStageRelation
             {
                 Id = Guid.NewGuid(),
                 WorkflowId = workflow.Id,
-                SourceStageId = workflow.Stages[0].Id,
-                TargetStageId = workflow.Stages[1].Id
+                SourceStageId = workflow.Stages[0].Id, // Draft
+                TargetStageId = workflow.Stages[1].Id  // Review
             },
             new WorkflowStageRelation
             {
                 Id = Guid.NewGuid(),
                 WorkflowId = workflow.Id,
-                SourceStageId = workflow.Stages[1].Id,
-                TargetStageId = workflow.Stages[2].Id
+                SourceStageId = workflow.Stages[1].Id, // Review
+                TargetStageId = workflow.Stages[2].Id  // Legal Review
             },
             new WorkflowStageRelation
             {
                 Id = Guid.NewGuid(),
                 WorkflowId = workflow.Id,
-                SourceStageId = workflow.Stages[2].Id,
-                TargetStageId = workflow.Stages[3].Id
+                SourceStageId = workflow.Stages[2].Id, // Legal Review
+                TargetStageId = workflow.Stages[3].Id  // Approved
             },
             new WorkflowStageRelation
             {
                 Id = Guid.NewGuid(),
                 WorkflowId = workflow.Id,
-                SourceStageId = workflow.Stages[1].Id,
-                TargetStageId = workflow.Stages[3].Id
+                SourceStageId = workflow.Stages[1].Id, // Review
+                TargetStageId = workflow.Stages[3].Id  // Approved
+            },
+            new WorkflowStageRelation
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = workflow.Id,
+                SourceStageId = workflow.Stages[3].Id, // Approved
+                TargetStageId = workflow.Stages[4].Id  // Published
             }
         };
 

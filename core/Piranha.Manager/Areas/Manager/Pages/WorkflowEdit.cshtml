@@ -180,8 +180,8 @@
         .actions {
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
-            align-items: flex-end;
+            justify-content: center; /* Changed from flex-start */
+            align-items: center; /* Changed from flex-end */
             padding: 0.5rem;
             min-width: 40px;
         }
@@ -309,29 +309,31 @@
                         <!-- Colored gradient bar as left border -->
                         <div class="stage-color-bar" :style="{'--stage-color': stage.color || '#cccccc'}"></div>
                         <div class="actions-move">
-                            <button v-on:click.prevent="moveStageUp(index)" class="btn btn-sm" :disabled="index === 0">
+                            <button v-on:click.prevent="moveStageUp(index)" class="btn btn-sm" :disabled="index === 0 || stage.isImmutable || stages[index-1] && stages[index-1].isImmutable">
                                 <i class="fas fa-chevron-up"></i>
                             </button>
-                            <button v-on:click.prevent="moveStageDown(index)" class="btn btn-sm" :disabled="index === stages.length - 1">
+                            <button v-on:click.prevent="moveStageDown(index)" class="btn btn-sm" :disabled="index === stages.length - 1 || stage.isImmutable || stages[index+1] && stages[index+1].isImmutable">
                                 <i class="fas fa-chevron-down"></i>
                             </button>
                         </div>
                         <div class="content" style="flex:1;">
                             <div class="form-group">
-                                <input v-model="stage.title" type="text" class="form-control" placeholder="@Localizer.Workflow["Stage name"]">
+                                <input v-model="stage.title" type="text" class="form-control" placeholder="@Localizer.Workflow["Stage name"]" :readonly="stage.isImmutable">
                             </div>
                             <div class="form-group">
-                                <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]"></textarea>
+                                <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]" :readonly="stage.isImmutable"></textarea>
                             </div>
                             <div class="form-group">
-                                <label>@Localizer.Workflow["Stage Color"]</label>
-                                <div class="input-group color-picker-group align-items-center" style="max-width: 220px;">
+                                <label class="mb-0">@Localizer.Workflow["Stage Color"]</label>
+                                <small class="form-text text-muted mb-2 mt-0">@Localizer.Workflow["Choose a color for this stage (optional)"]</small>
+                                <div class="input-group color-picker-group align-items-center mt-1" style="max-width: 220px;">
                                     <input
                                         type="color"
                                         :value="stage.color"
                                         class="color-picker-circle"
                                         v-on:change="onStageColorChange(stage, $event)"
                                         style="background: none;"
+                                        :disabled="stage.isImmutable"
                                     />
                                     <input
                                         type="text"
@@ -341,44 +343,49 @@
                                         tabindex="-1"
                                     />
                                 </div>
-                                <small class="form-text text-muted">@Localizer.Workflow["Choose a color for this stage (optional)"]</small>
                             </div>
-                            <div class="form-group">
-                                <label>@Localizer.Workflow["Authorized Roles"]</label>
-                                <div class="checkbox-list">
+                            <div class="form-group" v-if="!isRoleEditingDisabled(stage)">
+                                <label class="mb-0">@Localizer.Workflow["Authorized Roles"]</label>
+                                <small class="form-text text-muted mb-2 mt-0">@Localizer.Workflow["Select which roles can perform actions in this stage"]</small>
+                                <div class="checkbox-list mt-1">
                                     <div v-for="role in availableRoles" :key="role.id" class="form-check">
                                         <input class="form-check-input" 
                                                type="checkbox" 
                                                :id="'role-' + stage.id + '-' + role.id"
                                                :value="role.id" 
                                                :checked="stage.roleIds && stage.roleIds.includes(role.id)"
-                                               v-on:change="toggleStageRole(stage, role.id, $event)">
+                                               v-on:change="toggleStageRole(stage, role.id, $event)"
+                                               :disabled="isRoleEditingDisabled(stage)">
                                         <label class="form-check-label" :for="'role-' + stage.id + '-' + role.id">
                                             {{ role.name }}
                                         </label>
                                     </div>
                                 </div>
-                                <small class="form-text text-muted">@Localizer.Workflow["Select which roles can perform actions in this stage"]</small>
+                                <div class="mt-2" v-if="!isRoleEditingDisabled(stage) && availableRoles.length > 0"> 
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-1" @@click="selectAllRoles(stage)">@Localizer.General["Select All"]</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @@click="deselectAllRoles(stage)">@Localizer.General["Deselect All"]</button>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>@Localizer.Workflow["Stage Relations"]</label>
-                                <div class="checkbox-list">
+                            <div class="form-group" v-if="!isRelationEditingDisabled(stage)">
+                                <label class="mb-0">@Localizer.Workflow["Stage Relations"]</label>
+                                <small class="form-text text-muted mb-2 mt-0">@Localizer.Workflow["Select which stages this stage can transition to"]</small>
+                                <div class="checkbox-list mt-1">
                                     <div v-for="targetStage in getOtherStages(stage.id)" :key="targetStage.id" class="form-check">
                                         <input class="form-check-input" 
                                                type="checkbox" 
                                                :id="'relation-' + stage.id + '-' + targetStage.id"
                                                :checked="canTransitionTo(stage.id, targetStage.id)"
-                                               v-on:change="toggleStageRelation(stage.id, targetStage.id, $event)">
+                                               v-on:change="toggleStageRelation(stage.id, targetStage.id, $event)"
+                                               :disabled="isRelationEditingDisabled(stage)">
                                         <label class="form-check-label" :for="'relation-' + stage.id + '-' + targetStage.id">
                                             → {{ targetStage.title }}
                                         </label>
                                     </div>
                                 </div>
-                                <small class="form-text text-muted">@Localizer.Workflow["Select which stages this stage can transition to"]</small>
                             </div>
                         </div>
                         <div class="actions">
-                            <button v-on:click.prevent="removeStage(index)" class="btn btn-sm danger">
+                            <button v-on:click.prevent="removeStage(index)" class="btn btn-sm danger" :disabled="stage.isImmutable">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
