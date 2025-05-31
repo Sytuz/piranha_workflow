@@ -300,6 +300,12 @@ var js = [
         ]
     },
     {
+        name: "piranha.workflowdashboard.js",
+        items: [
+            "assets/src/js/piranha.workflowdashboard.js"
+        ]
+    },
+    {
         name: "piranha.workflowedit.js",
         items: [
             "assets/src/js/piranha.workflowedit.js"
