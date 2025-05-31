@@ -1,0 +1,81 @@
+@inject IAuthorizationService Auth
+@inject ManagerLocalizer Localizer
+
+<div id="changeRequestModal" class="modal modal-panel" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-paper-plane"></i> Submit Change Request</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+                <form id="changeRequestForm" v-on:submit.prevent="submitChangeRequest()" novalidate>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group">
+                                <label for="changeRequestTitle">Title <span class="text-danger">*</span></label>
+                                <input 
+                                    id="changeRequestTitle" 
+                                    v-model="changeRequestTitle" 
+                                    type="text" 
+                                    class="form-control" 
+                                    :class="{ 'is-invalid': changeRequestTitleError }"
+                                    placeholder="Briefly describe your changes" 
+                                    required>
+                                <div v-if="changeRequestTitleError" class="invalid-feedback">
+                                    {{ changeRequestTitleError }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group">
+                                <label for="changeRequestNotes">Notes</label>
+                                <textarea 
+                                    id="changeRequestNotes" 
+                                    v-model="changeRequestNotes" 
+                                    class="form-control" 
+                                    rows="4" 
+                                    placeholder="Add any additional notes or context for reviewers (optional)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current content summary -->
+                    <div class="row">
+                        <div class="col">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle"></i> Content Summary</h6>
+                                <p><strong>Title:</strong> {{ title }}</p>
+                                <p v-if="slug"><strong>Slug:</strong> {{ slug }}</p>
+                                <p><strong>Status:</strong> {{ state }}</p>
+                                <p class="mb-0"><small class="text-muted">This change request will capture the current state of your content for review.</small></p>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button 
+                    type="button" 
+                    v-on:click.prevent="submitChangeRequest()" 
+                    class="btn btn-warning"
+                    :disabled="submittingChangeRequest || !changeRequestTitle"
+                    :class="{ 'btn-loading': submittingChangeRequest }">
+                    <i class="fas fa-paper-plane"></i>
+                    Submit Change Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

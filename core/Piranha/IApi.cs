@@ -107,4 +107,9 @@ public interface IApi : IDisposable
     /// Gets the workflow stage roles repository.
     /// </summary>
     IWorkflowStageRoleRepository WorkflowStageRoles { get; }
+
+    /// <summary>
+    /// Gets the change request service.
+    /// </summary>
+    IChangeRequestService ChangeRequests { get; }
 }

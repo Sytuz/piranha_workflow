@@ -116,6 +116,12 @@ public sealed class Api : IApi, IDisposable
     public IWorkflowStageRoleRepository WorkflowStageRoles { get; }
 
     /// <summary>
+    /// Gets the change request service.
+    /// </summary>
+    public IChangeRequestService ChangeRequests { get; }
+
+
+    /// <summary>
     /// Gets if the current repository has caching enabled or not.
     /// </summary>
     public bool IsCached => _cache != null;
@@ -143,6 +149,7 @@ public sealed class Api : IApi, IDisposable
         IWorkflowStageRepository workflowStageRepository,
         IWorkflowStageRelationRepository workflowStageRelationRepository,
         IWorkflowStageRoleRepository workflowStageRoleRepository,
+        IChangeRequestRepository changeRequestRepository,
         ICache cache = null,
         IStorage storage = null,
         IImageProcessor processor = null,
@@ -164,6 +171,7 @@ public sealed class Api : IApi, IDisposable
         WorkflowStages = new WorkflowStageService(workflowStageRepository, workflowStageRoleRepository);
         WorkflowStageRelations = new WorkflowStageRelationService(workflowStageRelationRepository);
         WorkflowStageRoles = workflowStageRoleRepository;
+        ChangeRequests = new ChangeRequestService(changeRequestRepository, workflowRepository, workflowStageRepository);
 
         // Create services with dependencies
         Content = new ContentService(contentRepository, contentFactory, Languages, cache, search);

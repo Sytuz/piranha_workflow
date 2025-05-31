@@ -77,6 +77,13 @@ public class PermissionApiController : Controller
         model.Sites.Edit = (await _auth.AuthorizeAsync(User, Permission.SitesEdit)).Succeeded;
         model.Sites.Save = (await _auth.AuthorizeAsync(User, Permission.SitesSave)).Succeeded;
 
+        // ChangeRequest permissions
+        model.ChangeRequests.Add = (await _auth.AuthorizeAsync(User, Permission.ChangeRequestsAdd)).Succeeded;
+        model.ChangeRequests.Delete = (await _auth.AuthorizeAsync(User, Permission.ChangeRequestsDelete)).Succeeded;
+        model.ChangeRequests.Edit = (await _auth.AuthorizeAsync(User, Permission.ChangeRequestsEdit)).Succeeded;
+        model.ChangeRequests.Save = (await _auth.AuthorizeAsync(User, Permission.ChangeRequestsSave)).Succeeded;
+        model.ChangeRequests.Submit = (await _auth.AuthorizeAsync(User, Permission.ChangeRequestsSubmit)).Succeeded;
+
         return model;
     }
 }

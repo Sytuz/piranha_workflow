@@ -55,6 +55,7 @@ public static class ManagerModuleExtensions
         services.AddScoped<PostService>();
         services.AddScoped<SiteService>();
         services.AddScoped<WorkflowService>();
+        services.AddScoped<Piranha.Services.IChangeRequestService, Piranha.Services.ChangeRequestService>();
 
         // Add localization service
         services.AddScoped<ManagerLocalizer>();
