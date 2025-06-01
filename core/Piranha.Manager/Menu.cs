@@ -96,14 +96,20 @@ public static class Menu
                     Route = "~/manager/config",
                     Policy = Permission.Config,
                     Css = "fas fa-cogs"
-                },
-                new MenuItem
+                },                new MenuItem
                 {
                     InternalId = "Modules",
                     Name = "Modules",
                     Route = "~/manager/modules",
                     Policy = Permission.Modules,
                     Css = "fas fa-code-branch"
+                },                new MenuItem
+                {
+                    InternalId = "Observability",
+                    Name = "Observability",
+                    Route = "~/manager/observability",
+                    Policy = Permission.Admin,
+                    Css = "fas fa-chart-line"
                 }
             }
         }

@@ -4,6 +4,7 @@ using Piranha.AspNetCore.Identity.SQLite;
 using Piranha.AttributeBuilder;
 using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
+using Piranha.Manager.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +28,8 @@ builder.AddPiranha(options =>
 
     var connectionString = builder.Configuration.GetConnectionString("piranha");
     options.UseEF<SQLiteDb>(db => db.UseSqlite(connectionString));
-    options.UseIdentityWithSeed<IdentitySQLiteDb>(db => db.UseSqlite(connectionString));
+    options.UseIdentityWithSeed<IdentitySQLiteDb>(db => db.UseSqlite(connectionString));    // Add observability for telemetry metrics
+    options.AddObservability("Piranha.RazorWeb", "1.0.0");
 
     /**
      * Here you can configure the different permissions
@@ -46,6 +48,9 @@ builder.AddPiranha(options =>
     options.LoginUrl = "login";
      */
 });
+
+// Add health checks
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -68,9 +73,13 @@ app.UsePiranha(options =>
     // Configure Tiny MCE
     EditorConfig.FromFile("editorconfig.json");
 
-    options.UseManager();
+    // Add observability middleware
+    options.UseObservability();    options.UseManager();
     options.UseTinyMCE();
     options.UseIdentity();
 });
+
+// Add health check endpoint
+app.MapHealthChecks("/health");
 
 app.Run();
