@@ -40,7 +40,7 @@ namespace Piranha.Services
         Task ToggleEnabledAsync(Guid id);
 
         /// <summary>
-        /// Creates a standard workflow with predefined stages.
+        /// Creates a new standard workflow with the specified title.
         /// </summary>
         /// <param name="title">The workflow title</param>
         /// <param name="description">Optional workflow description</param>
@@ -48,11 +48,17 @@ namespace Piranha.Services
         Task<Workflow> CreateStandardWorkflowAsync(string title, string description = null);
 
         /// <summary>
-        /// Checks if the given workflow title is unique.
+        /// Checks if the given title is unique.
         /// </summary>
-        /// <param name="title">The title to check</param>
-        /// <param name="id">Optional workflow id to exclude</param>
+        /// <param name="title">The title</param>
+        /// <param name="id">Optional id to exclude</param>
         /// <returns>If the title is unique</returns>
         Task<bool> IsUniqueTitleAsync(string title, Guid? id = null);
+
+        /// <summary>
+        /// Initializes Draft stages for existing workflows with all available roles.
+        /// This should be run once at project startup.
+        /// </summary>
+        Task InitializeDraftStageRolesAsync();
     }
 }

@@ -159,8 +159,22 @@ namespace Piranha.Manager.Controllers
         [Route("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            await _service.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _service.DeleteAsync(id);
+                return NoContent();
+            }
+            catch (ValidationException e)
+            {
+                // Return a 400 Bad Request for validation errors
+                return BadRequest(new { message = e.Message });
+            }
+            catch (Exception e)
+            {
+                // Log the exception details (e.g., using a logging framework)
+                // For now, return a 500 error with the exception message
+                return StatusCode(500, new { message = e.Message, details = e.ToString() });
+            }
         }
 
         /// <summary>

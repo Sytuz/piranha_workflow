@@ -100,13 +100,12 @@
                                 <a :href="piranha.baseUrl + 'manager/workflow/edit/' + selectedWorkflow.id" class="btn btn-sm btn-primary mr-2">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
-                                <button v-if="selectedWorkflow.isEnabled" v-on:click.prevent="toggleEnabled(selectedWorkflow)" class="btn btn-sm btn-warning mr-2 text-white">
-                                    <i class="fas fa-ban"></i> Disable
-                                </button>
-                                <button v-else v-on:click.prevent="toggleEnabled(selectedWorkflow)" class="btn btn-sm btn-success mr-2">
+                                <!-- Enable button: Only show if the workflow is NOT currently enabled -->
+                                <button v-if="!selectedWorkflow.isEnabled" v-on:click.prevent="toggleEnabled(selectedWorkflow)" class="btn btn-sm btn-success mr-2">
                                     <i class="fas fa-check-circle"></i> Enable
                                 </button>
-                                <a v-on:click.prevent="remove(selectedWorkflow.id)" class="btn btn-sm btn-danger text-white">
+                                <!-- Delete button: Only show if the workflow is NOT currently enabled -->
+                                <a v-if="!selectedWorkflow.isEnabled" v-on:click.prevent="remove(selectedWorkflow.id)" class="btn btn-sm btn-danger text-white">
                                     <i class="fas fa-trash"></i> Delete
                                 </a>
                             </div>

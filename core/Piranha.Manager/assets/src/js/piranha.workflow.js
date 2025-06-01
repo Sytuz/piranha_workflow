@@ -269,52 +269,65 @@ piranha.workflow = new Vue({
         retry: function() {
             this.load(); 
         },
-        toggleEnabled: function(workflow) {
+        toggleEnabled: function(workflowToEnable) {
             var self = this;
-            var action = workflow.isEnabled ? "Disable" : "Enable";
-            var message = action + " Workflow";
-            var confirmMessage = "Are you sure you want to " + action.toLowerCase() + " the workflow '" + workflow.title + "'?";
-            if (!workflow.isEnabled && !self.items.some(w => w.isDefault)) {
-                 confirmMessage += " This will also set it as the default workflow as no other default is set.";
-            } else if (workflow.isEnabled && workflow.isDefault && self.items.filter(w => w.isEnabled && w.id !== workflow.id).length === 0) {
-                piranha.notifications.push({ body: "Cannot disable the last enabled default workflow.", type: "warning", hide: true });
+            // This function now only ENABLES a workflow. Disabling happens automatically to others.
+            if (workflowToEnable.isEnabled) {
+                piranha.notifications.push({ body: "Workflow '" + workflowToEnable.title + "' is already the active workflow.", type: "info", hide: true });
                 return;
             }
 
+            var message = "Enable Workflow";
+            var confirmMessage = "Are you sure you want to enable the workflow '" + workflowToEnable.title + "'? This will disable any other currently active workflow.";
 
-            piranha.alert.confirmThis(message, confirmMessage, function () {
-                fetch(piranha.baseUrl + "manager/api/workflow/" + workflow.id + "/toggle-enabled", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    }
-                })
-                .then(function (response) {
-                    if (!response.ok) {
-                        return response.json().then(function(err) { throw err; });
-                    }
-                    return response.json(); // Expecting the updated workflow
-                })
-                .then(function (updatedWorkflow) {
-                    piranha.notifications.push({ body: "Workflow '" + updatedWorkflow.title + "' has been " + (updatedWorkflow.isEnabled ? "enabled" : "disabled") + ".", type: "success", hide: true });
-                    // Reload all workflows to reflect potential changes in IsDefault status of other workflows
-                    self.load().then(() => {
-                        // Reselect the current workflow if it's still in the list
-                        const reselected = self.items.find(item => item.id === updatedWorkflow.id);
-                        if (reselected) {
-                            self.selectWorkflow(reselected);
-                        } else if (self.filteredItems.length > 0) {
-                            self.selectWorkflow(self.filteredItems[0]);
-                        } else {
-                            self.selectedWorkflow = null;
-                            self.updateGoJsModel(); // Clear diagram
+            piranha.alert.open({
+                title: message,
+                body: confirmMessage,
+                confirmText: "Enable",
+                confirmCss: "btn-success",
+                onConfirm: function () {
+                    fetch(piranha.baseUrl + "manager/api/workflow/" + workflowToEnable.id + "/toggle-enabled", {
+                        method: "POST", // Assuming the backend is adjusted for this to mean "make this one enabled"
+                        headers: {
+                            "Content-Type": "application/json",
                         }
+                    })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            // Try to parse error response as JSON
+                            return response.json().then(function(errData) { 
+                                throw new Error(errData.message || "Server error"); 
+                            }).catch(function() {
+                                // If not JSON, or no message, throw generic error
+                                throw new Error("Failed to enable workflow. Status: " + response.status);
+                            });
+                        }
+                        // No specific JSON body is expected on success from ToggleEnabledAsync as it just saves.
+                        // The success is confirmed by reloading the list.
+                        return response.text(); // Or response.json() if backend sends back the updated workflow or all workflows
+                    })
+                    .then(function () {
+                        piranha.notifications.push({ body: "Workflow '" + workflowToEnable.title + "' has been enabled.", type: "success", hide: true });
+                        // Reload all workflows to reflect the change in active status.
+                        self.load().then(() => {
+                            // Reselect the (now) enabled workflow.
+                            const reselected = self.items.find(item => item.id === workflowToEnable.id);
+                            if (reselected) {
+                                self.selectWorkflow(reselected);
+                            } else if (self.filteredItems.length > 0) {
+                                // Fallback if somehow the enabled one isn't found (should not happen)
+                                self.selectWorkflow(self.filteredItems[0]);
+                            } else {
+                                self.selectedWorkflow = null;
+                                if (self.goJsDiagram) self.updateGoJsModel(); // Clear diagram
+                            }
+                        });
+                    })
+                    .catch(function (error) {
+                        console.error("Error enabling workflow:", error);
+                        piranha.notifications.push({ body: error.message || "Failed to enable workflow.", type: "danger", hide: true });
                     });
-                })
-                .catch(function (error) {
-                    console.error("Error toggling workflow enabled state:", error);
-                    piranha.notifications.push({ body: error.body || "Failed to " + action.toLowerCase() + " workflow.", type: "danger", hide: true });
-                });
+                }
             });
         },
         createWorkflow: function () {
@@ -385,36 +398,77 @@ piranha.workflow = new Vue({
         },
         remove: function(id) {
             var self = this;
-            piranha.alert.confirmThis("Delete Workflow", "Are you sure you want to delete this workflow?", function() {
-                fetch(piranha.baseUrl + "manager/api/workflow/delete/" + id, { method: "DELETE" })
-                    .then(function(response) { return response.json(); })
-                    .then(function(result) {
-                        var initialLength = self.items.length;
-                        self.items = self.items.filter(item => item.id !== id);
-                        
-                        if (self.selectedWorkflow && self.selectedWorkflow.id === id) {
-                            self.selectedWorkflow = self.filteredItems.length > 0 ? self.filteredItems[0] : null;
-                        } else if (initialLength > self.items.length && self.filteredItems.length > 0 && !self.selectedWorkflow) {
-                            self.selectedWorkflow = self.filteredItems[0];
-                        } else if (self.filteredItems.length === 0) {
-                            self.selectedWorkflow = null;
-                        }
-                        
-                        self.$nextTick(() => {
-                            if (self.selectedWorkflow && self.selectedWorkflow.stages && self.selectedWorkflow.stages.length > 0) {
-                                self.initGoJsDiagram(); 
-                                self.updateGoJsModel();
-                            } else if (self.goJsDiagram) {
-                                self.updateGoJsModel(); // Corrected typo from updateGoJsDiagramModel
+            var workflowToRemove = self.items.find(item => item.id === id);
+            if (!workflowToRemove) {
+                console.error("Workflow to remove not found:", id);
+                piranha.notifications.push({ body: "Could not find the workflow to delete.", type: "danger", hide: true });
+                return;
+            }
+
+            // Prevent deleting the active workflow from the UI side as well, though backend enforces it.
+            if (workflowToRemove.isEnabled) {
+                piranha.notifications.push({ body: "Cannot delete the active workflow. Please enable another workflow first.", type: "warning", hide: true });
+                return;
+            }
+
+            piranha.alert.open({
+                title: "Delete Workflow",
+                body: "Are you sure you want to delete the workflow '" + workflowToRemove.title + "'?",
+                confirmCss: "btn-danger",
+                confirmIcon: "fas fa-trash",
+                confirmText: piranha.resources.texts.delete || "Delete", // Fallback if texts.delete is not defined
+                onConfirm: function() {
+                    fetch(piranha.baseUrl + "manager/api/workflow/" + id, { method: "DELETE" })
+                        .then(function(response) {
+                            if (!response.ok) {
+                                return response.text().then(function(text) {
+                                    let finalDetailedMessage = text.trim(); // Default to the full trimmed server response text
+                                    try {
+                                        const parsedJson = JSON.parse(text.trim()); // Attempt to parse the trimmed text
+                                        // If parsing is successful and a non-empty 'message' string exists, use it
+                                        if (parsedJson && typeof parsedJson.message === 'string' && parsedJson.message.trim() !== '') {
+                                            finalDetailedMessage = parsedJson.message.trim();
+                                        }
+                                        // If it's valid JSON but not the expected {message: ''} structure,
+                                        // finalDetailedMessage will remain the full trimmed JSON string, which is acceptable.
+                                    } catch (jsonParseError) {
+                                        // Not JSON or malformed JSON. finalDetailedMessage is already the trimmed raw text.
+                                        // Log the actual parsing error for diagnostics, but don't let it pollute the user-facing message.
+                                        console.warn(`Error response from server (status ${response.status}) was not valid JSON or 'message' field was not found/string. Raw text: "${text}". Parse error: ${jsonParseError.message}`);
+                                    }
+                                    // Throw an error with a consistent prefix and the determined message
+                                    throw new Error("Workflow deletion failed: " + finalDetailedMessage);
+                                });
                             }
+                            // For successful responses (like 204 NoContent), there might be no body or a non-JSON body.
+                            // If a body is expected for success, it should be handled here.
+                            // For DELETE leading to 204, just returning the response or nothing is fine.
+                            return response; 
+                        })
+                        .then(function(response) { // Note: 'response' here might be undefined if the previous .then threw an error.
+                                                  // Or it's the original response object for success cases.
+                            // Only proceed with success notifications if the operation didn't throw an error.
+                            // The actual check for response.ok was done, and errors were thrown.
+                            // If we reach here without an error, it implies a successful HTTP status.
+                            piranha.notifications.push({ type: "success", body: "The workflow has been deleted" });
+                            // Update local state
+                            self.items = self.items.filter(item => item.id !== id);
+                            if (self.selectedWorkflow && self.selectedWorkflow.id === id) {
+                                self.selectedWorkflow = self.filteredItems.length > 0 ? self.filteredItems[0] : null;
+                            } else if (self.filteredItems.length === 0) {
+                                self.selectedWorkflow = null;
+                            }
+
+                            // Refresh the diagram model if it was displayed
+                            if (self.goJsDiagram) {
+                                self.updateGoJsModel(); 
+                            }
+                        })
+                        .catch(function(error) {
+                            console.error("Error deleting workflow:", error);
+                            piranha.notifications.push({ type: "danger", body: error.body || error.message || "Something went wrong deleting the workflow" });
                         });
-                        
-                        piranha.notifications.push({ type: "success", body: "The workflow has been deleted" });
-                    })
-                    .catch(function(error) {
-                        console.error("Error deleting workflow:", error);
-                        piranha.notifications.push({ type: "danger", body: "Something went wrong deleting the workflow" });
-                    });
+                }
             });
         }
     },

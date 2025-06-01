@@ -42,15 +42,18 @@ public class WorkflowService : IWorkflowService
         if (!await _repo.IsUniqueTitleAsync(model.Title, model.Id).ConfigureAwait(false))
         {
             throw new ValidationException("Name already in use");
-        }        // Set timestamps
-        if (model.Id == Guid.Empty)
+        }
+
+        model.LastModified = DateTime.Now;
+
+        if (model.Id == Guid.Empty) // New workflow
         {
             model.Id = Guid.NewGuid();
             model.Created = DateTime.Now;
 
             // Get all available roles to initialize Draft stage
             var allRoles = await App.Roles.GetAllAsync();
-            
+
             // Create Draft stage first
             var draftStageId = Guid.NewGuid();
             var draftStageRoles = allRoles.Select(role => new WorkflowStageRole
@@ -61,62 +64,77 @@ public class WorkflowService : IWorkflowService
             }).ToList();
 
             // If this is a new workflow, ensure it has the default two immutable stages
-            var draftStage = new WorkflowStage
+            // Only add these if no stages are already provided by the model (e.g. from CreateStandardWorkflowAsync)
+            if (model.Stages == null || !model.Stages.Any())
             {
-                Id = draftStageId,
-                WorkflowId = model.Id,
-                Title = "Draft",
-                Description = "Initial content creation",
-                SortOrder = 1,
-                IsPublished = false,
-                Color = "#c8c8c8",
-                IsImmutable = true,
-                Roles = draftStageRoles
-            };
-            var publishedStage = new WorkflowStage
-            {
-                Id = Guid.NewGuid(),
-                WorkflowId = model.Id,
-                Title = "Published",
-                Description = "Final published stage",
-                SortOrder = 2,
-                IsPublished = true,
-                Color = "#4CAF50",
-                IsImmutable = true
-            };
-
-            model.Stages = new List<WorkflowStage> { draftStage, publishedStage };
-            model.Relations = new List<WorkflowStageRelation>
-            {
-                new WorkflowStageRelation
+                var draftStage = new WorkflowStage
+                {
+                    Id = draftStageId,
+                    WorkflowId = model.Id,
+                    Title = "Draft",
+                    Description = "Initial content creation",
+                    SortOrder = 1,
+                    IsPublished = false,
+                    Color = "#c8c8c8",
+                    IsImmutable = true,
+                    Roles = draftStageRoles
+                };
+                var publishedStage = new WorkflowStage
                 {
                     Id = Guid.NewGuid(),
                     WorkflowId = model.Id,
-                    SourceStageId = draftStage.Id,
-                    TargetStageId = publishedStage.Id
-                }
-            };
-        }
+                    Title = "Published",
+                    Description = "Final published stage",
+                    SortOrder = 2,
+                    IsPublished = true,
+                    Color = "#4CAF50",
+                    IsImmutable = true
+                };
+                model.Stages = new List<WorkflowStage> { draftStage, publishedStage };
+                model.Relations = new List<WorkflowStageRelation>
+                {
+                    new WorkflowStageRelation
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkflowId = model.Id,
+                        SourceStageId = draftStage.Id,
+                        TargetStageId = publishedStage.Id
+                    }
+                };
+            }
 
-        model.LastModified = DateTime.Now;
-
-        // If this workflow is set as default, unset any other default workflow
-        if (model.IsDefault)
-        {
-            var workflows = await _repo.GetAllAsync();
-            foreach (var workflow in workflows.Where(w => w.Id != model.Id && w.IsDefault))
+            var allCurrentWorkflows = await _repo.GetAllAsync().ConfigureAwait(false);
+            if (!allCurrentWorkflows.Any(w => w.Id != model.Id)) // This new one will be the only one
             {
-                workflow.IsDefault = false;
-                await _repo.SaveAsync(workflow).ConfigureAwait(false);
+                model.IsEnabled = true;
+                model.IsDefault = true;
+            }
+            else
+            {
+                model.IsEnabled = false;
+                model.IsDefault = false;
             }
         }
+        else // Existing workflow
+        {
+            // Preserve existing IsEnabled and IsDefault status.
+            var existingWorkflow = await _repo.GetByIdAsync(model.Id).ConfigureAwait(false);
+            if (existingWorkflow != null)
+            {
+                model.IsEnabled = existingWorkflow.IsEnabled;
+                model.IsDefault = existingWorkflow.IsDefault;
+            }
+            // If existingWorkflow is null, it's an issue, but _repo.SaveAsync might handle it as an insert if ID doesn't match.
+            // For this logic, we assume ID is valid and refers to an existing record.
+        }
 
-        // Set unique IDs for stages if not set
+        // Set unique IDs for stages if not set (primarily for stages added manually to an existing workflow)
         foreach (var stage in model.Stages)
         {
             if (stage.Id == Guid.Empty)
             {
                 stage.Id = Guid.NewGuid();
+                stage.WorkflowId = model.Id; // Ensure WorkflowId is set for new stages
             }
         }
 
@@ -129,91 +147,65 @@ public class WorkflowService : IWorkflowService
         var workflowToDelete = await _repo.GetByIdAsync(id).ConfigureAwait(false);
         if (workflowToDelete == null)
         {
-            return; // Or throw not found
+            // Or throw KeyNotFoundException if preferred
+            return;
         }
 
         var allWorkflows = (await _repo.GetAllAsync().ConfigureAwait(false)).ToList();
 
-        // Prevent deleting the last workflow
+        // Prevent deleting the only workflow in the system.
         if (allWorkflows.Count <= 1)
         {
             throw new ValidationException("Cannot delete the only workflow in the system.");
         }
 
-        // Prevent deleting the last enabled workflow
-        var enabledWorkflows = allWorkflows.Where(w => w.IsEnabled).ToList();
-        if (workflowToDelete.IsEnabled && enabledWorkflows.Count == 1 && enabledWorkflows[0].Id == id)
+        // Prevent deleting the currently enabled (active) workflow.
+        if (workflowToDelete.IsEnabled)
         {
-            throw new ValidationException("Cannot delete the last enabled workflow. Please disable it first or enable another workflow.");
-        }
-
-        if (workflowToDelete.IsDefault)
-        {
-            // Find another enabled workflow to set as default
-            var nextDefault = allWorkflows.FirstOrDefault(w => w.Id != id && w.IsEnabled);
-            if (nextDefault != null)
-            {
-                nextDefault.IsDefault = true;
-                await _repo.SaveAsync(nextDefault).ConfigureAwait(false);
-            }
-            else
-            {
-                // This case should ideally be prevented by the "last enabled workflow" check if it was also default.
-                // If somehow reached, it means we are deleting the default and no other enabled workflow exists to take over.
-                // Depending on requirements, this could be an error or allowed.
-                // For now, the above check for last enabled workflow should cover this.
-            }
+            throw new ValidationException("Cannot delete the active workflow. Please enable another workflow first.");
         }
 
         await _repo.DeleteAsync(id).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task ToggleEnabledAsync(Guid id)
+    public async Task ToggleEnabledAsync(Guid idToMakeEnabled)
     {
-        var workflow = await _repo.GetByIdAsync(id).ConfigureAwait(false);
-        if (workflow == null)
+        var workflowToEnable = await _repo.GetByIdAsync(idToMakeEnabled).ConfigureAwait(false);
+        if (workflowToEnable == null)
         {
-            throw new KeyNotFoundException($"Workflow with id {id} not found.");
+            throw new KeyNotFoundException($"Workflow with id {idToMakeEnabled} not found.");
         }
 
-        var wasEnabled = workflow.IsEnabled;
-        workflow.IsEnabled = !workflow.IsEnabled;
-        workflow.LastModified = DateTime.Now;
+        // If it's already enabled, there's nothing to do.
+        if (workflowToEnable.IsEnabled)
+        {
+            return;
+        }
 
         var allWorkflows = (await _repo.GetAllAsync().ConfigureAwait(false)).ToList();
+        var now = DateTime.Now;
 
-        if (workflow.IsEnabled) // Workflow is being enabled
+        foreach (var wf in allWorkflows)
         {
-            // If no other workflow is default, make this one default
-            if (!allWorkflows.Any(w => w.Id != workflow.Id && w.IsDefault))
+            bool changed = false;
+            if (wf.Id == idToMakeEnabled)
             {
-                workflow.IsDefault = true;
+                if (!wf.IsEnabled) { wf.IsEnabled = true; changed = true; }
+                if (!wf.IsDefault) { wf.IsDefault = true; changed = true; }
+            }
+            else
+            {
+                if (wf.IsEnabled) { wf.IsEnabled = false; changed = true; }
+                if (wf.IsDefault) { wf.IsDefault = false; changed = true; }
+            }
+
+            if (changed)
+            {
+                wf.LastModified = now;
+                await _repo.SaveAsync(wf).ConfigureAwait(false);
             }
         }
-        else // Workflow is being disabled
-        {
-            if (workflow.IsDefault)
-            {
-                // This was the default workflow, try to set another enabled one as default
-                var nextDefault = allWorkflows.FirstOrDefault(w => w.Id != workflow.Id && w.IsEnabled);
-                if (nextDefault != null)
-                {
-                    nextDefault.IsDefault = true;
-                    await _repo.SaveAsync(nextDefault).ConfigureAwait(false);
-                }
-                else
-                {
-                    // This is the last enabled workflow and it was default. Prevent disabling.
-                    workflow.IsEnabled = true; // Revert
-                    workflow.LastModified = DateTime.Now; // Revert modification time or handle appropriately
-                    await _repo.SaveAsync(workflow).ConfigureAwait(false); // Save reverted state
-                    throw new ValidationException("Cannot disable the last enabled default workflow. Enable another workflow first to make it default.");
-                }
-                workflow.IsDefault = false; // No longer default as it's disabled
-            }
-        }
-        await _repo.SaveAsync(workflow).ConfigureAwait(false);
     }    /// <inheritdoc />
     public async Task<Workflow> CreateStandardWorkflowAsync(string title, string description = null)
     {
@@ -234,8 +226,7 @@ public class WorkflowService : IWorkflowService
             workflow.IsEnabled = true; // Automatically enable the first workflow
         }        // Get all available roles to initialize Draft stage
         var allRoles = await App.Roles.GetAllAsync();
-        Console.WriteLine($"Creating standard workflow '{title}' with {allRoles.Count()} roles.");
-        
+
         // Create Draft stage first to get its ID
         var draftStageId = Guid.NewGuid();
         var draftStageRoles = allRoles.Select(role => new WorkflowStageRole
@@ -244,7 +235,7 @@ public class WorkflowService : IWorkflowService
             WorkflowStageId = draftStageId,
             RoleId = role.Id
         }).ToList();
-    
+
         // Add standard stages
         workflow.Stages = new List<WorkflowStage>
         {
@@ -351,5 +342,32 @@ public class WorkflowService : IWorkflowService
     public async Task<bool> IsUniqueTitleAsync(string title, Guid? id = null)
     {
         return await _repo.IsUniqueTitleAsync(title, id).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Initializes Draft stages for existing workflows with all available roles.
+    /// This should be run once at project startup.
+    /// </summary>
+    public async Task InitializeDraftStageRolesAsync()
+    {
+        var allWorkflows = await _repo.GetAllAsync().ConfigureAwait(false);
+        var allRoles = await App.Roles.GetAllAsync();
+                
+        foreach (var workflow in allWorkflows)
+        {
+            var draftStage = workflow.Stages?.FirstOrDefault(s => s.Title == "Draft");
+            if (draftStage != null && (draftStage.Roles == null || !draftStage.Roles.Any()))
+            {                
+                draftStage.Roles = allRoles.Select(role => new WorkflowStageRole
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowStageId = draftStage.Id,
+                    RoleId = role.Id
+                }).ToList();
+                
+                workflow.LastModified = DateTime.Now;
+                await _repo.SaveAsync(workflow).ConfigureAwait(false);
+            }
+        }
     }
 }
