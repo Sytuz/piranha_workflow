@@ -42,25 +42,36 @@ public class WorkflowService : IWorkflowService
         if (!await _repo.IsUniqueTitleAsync(model.Title, model.Id).ConfigureAwait(false))
         {
             throw new ValidationException("Name already in use");
-        }
-
-        // Set timestamps
+        }        // Set timestamps
         if (model.Id == Guid.Empty)
         {
             model.Id = Guid.NewGuid();
             model.Created = DateTime.Now;
 
+            // Get all available roles to initialize Draft stage
+            var allRoles = await App.Roles.GetAllAsync();
+            
+            // Create Draft stage first
+            var draftStageId = Guid.NewGuid();
+            var draftStageRoles = allRoles.Select(role => new WorkflowStageRole
+            {
+                Id = Guid.NewGuid(),
+                WorkflowStageId = draftStageId,
+                RoleId = role.Id
+            }).ToList();
+
             // If this is a new workflow, ensure it has the default two immutable stages
             var draftStage = new WorkflowStage
             {
-                Id = Guid.NewGuid(),
+                Id = draftStageId,
                 WorkflowId = model.Id,
                 Title = "Draft",
                 Description = "Initial content creation",
                 SortOrder = 1,
                 IsPublished = false,
                 Color = "#c8c8c8",
-                IsImmutable = true
+                IsImmutable = true,
+                Roles = draftStageRoles
             };
             var publishedStage = new WorkflowStage
             {
@@ -203,9 +214,7 @@ public class WorkflowService : IWorkflowService
             }
         }
         await _repo.SaveAsync(workflow).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
+    }    /// <inheritdoc />
     public async Task<Workflow> CreateStandardWorkflowAsync(string title, string description = null)
     {
         var workflow = new Workflow
@@ -223,21 +232,33 @@ public class WorkflowService : IWorkflowService
         {
             workflow.IsDefault = true;
             workflow.IsEnabled = true; // Automatically enable the first workflow
-        }
+        }        // Get all available roles to initialize Draft stage
+        var allRoles = await App.Roles.GetAllAsync();
+        Console.WriteLine($"Creating standard workflow '{title}' with {allRoles.Count()} roles.");
+        
+        // Create Draft stage first to get its ID
+        var draftStageId = Guid.NewGuid();
+        var draftStageRoles = allRoles.Select(role => new WorkflowStageRole
+        {
+            Id = Guid.NewGuid(),
+            WorkflowStageId = draftStageId,
+            RoleId = role.Id
+        }).ToList();
     
         // Add standard stages
         workflow.Stages = new List<WorkflowStage>
         {
             new WorkflowStage
             {
-                Id = Guid.NewGuid(),
+                Id = draftStageId,
                 WorkflowId = workflow.Id,
                 Title = "Draft",
                 Description = "Initial content creation",
                 SortOrder = 1,
                 IsPublished = false,
                 Color = "#c8c8c8",
-                IsImmutable = true
+                IsImmutable = true,
+                Roles = draftStageRoles
             },
             new WorkflowStage
             {

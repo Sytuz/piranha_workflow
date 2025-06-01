@@ -21,47 +21,66 @@ piranha.workflowedit = new Vue({
         saveUrl: piranha.baseUrl + "manager/api/workflow/save",
         rolesUrl: piranha.baseUrl + "manager/api/workflow/roles",
         originalTitle: null,
-        goJsDiagram: null, // GoJS diagram instance
-        diagramInitialized: false,
-        initAttempts: 0,
-        maxInitAttempts: 5
-    },
-    methods: {
-        bind: function (result) {
-            this.id = result.id;
-            this.title = result.title;
-            this.originalTitle = result.title;
-            this.description = result.description;
-            // Convert stages and roles from API format to UI format
-            this.stages = (result.stages || []).map(function(stage) {
+         // GoJS diagram instance
+            diagramInitialized: false,
+            initAttempts: 0,
+            maxInitAttempts: 5
+            },
+            methods: {
+            bind: function (result) {
+                console.log("Bind function called with result:", result);
+                
+                this.id = result.id;
+                this.title = result.title;
+                this.originalTitle = result.title;
+                this.description = result.description;
+                
+                console.log("Processing stages from API:", result.stages);
+                
+                // Convert stages and roles from API format to UI format
+                this.stages = (result.stages || []).map(function(stage) {
+                console.log("Processing stage:", stage);
+                console.log("Stage roles:", stage.roles);
+                
+                const roleIds = (stage.roles || []).map(function(role) {
+                    console.log("Processing role:", role);
+                    const roleId = role.roleId || role.RoleId;
+                    console.log("Extracted roleId:", roleId);
+                    return String(roleId).toUpperCase();
+                }) || [];
+                
+                console.log("Final roleIds for stage", stage.id, ":", roleIds);
+                
                 return {
                     id: stage.id,
                     title: stage.title,
                     description: stage.description,
                     sortOrder: stage.sortOrder,
                     color: stage.color || "#cccccc",
-                    roleIds: (stage.roles || []).map(function(role) {
-                        return role.roleId;
-                    }) || [],
+                    roleIds: roleIds,
                     isImmutable: !!stage.isImmutable // <-- Add isImmutable
                 };
-            });
-            
-            // Convert relations from API format to UI format
-            this.relations = (result.relations || []).map(function(relation) {
+                });
+                
+                console.log("Final processed stages:", this.stages);
+                
+                // Convert relations from API format to UI format
+                this.relations = (result.relations || []).map(function(relation) {
                 return {
                     sourceStageId: relation.sourceStageId,
                     targetStageId: relation.targetStageId
                 };
-            });
-            
-            this.loading = false;
-            
-            // Initialize diagram after data is loaded with a failsafe mechanism
-            this.$nextTick(() => {
+                });
+                
+                console.log("Final processed relations:", this.relations);
+                
+                this.loading = false;
+                
+                // Initialize diagram after data is loaded with a failsafe mechanism
+                this.$nextTick(() => {
                 this.attemptDiagramInitialization();
-            });
-        },
+                });
+            },
 
         // Reliable diagram initialization with exponential backoff
         attemptDiagramInitialization: function() {
