@@ -376,7 +376,7 @@
                             <div class="row">
                                 <div class="col-md-3 mb-3">
                                     <label for="contentTypeFilter" class="form-label">Content Type</label>
-                                    <select id="contentTypeFilter" class="form-select" v-model="changeFilters.contentType" v-on:change="loadChangeHistory">
+                                    <select id="contentTypeFilter" class="form-control" v-model="changeFilters.contentType" v-on:change="loadChangeHistory">
                                         <option value="">All Types</option>
                                         <option value="Page">Pages</option>
                                         <option value="Post">Posts</option>
@@ -384,7 +384,7 @@
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label for="changeTypeFilter" class="form-label">Change Type</label>
-                                    <select id="changeTypeFilter" class="form-select" v-model="changeFilters.changeType" v-on:change="loadChangeHistory">
+                                    <select id="changeTypeFilter" class="form-control" v-model="changeFilters.changeType" v-on:change="loadChangeHistory">
                                         <option value="">All Changes</option>
                                         <option value="Created">Created</option>
                                         <option value="Updated">Updated</option>
