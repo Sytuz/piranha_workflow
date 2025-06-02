@@ -485,7 +485,7 @@ piranha.pageedit = new Vue({
             }
 
             // Ensure required fields are present and valid
-            var workflowId = window.changeRequestConfig ? window.changeRequestConfig.defaultWorkflowId : null;
+            var workflowId = window.changeRequestConfig ? window.changeRequestConfig.workflowId : null;
             var createdById = window.changeRequestConfig ? window.changeRequestConfig.userId : null;
 
             if (!workflowId) {
