@@ -13,10 +13,7 @@ namespace Piranha.Manager.Controllers
     /// </summary>
     [Area("Manager")]
     [Route("manager/observability")]
-    [Route("manager/api/observability")]
     [AllowAnonymous]
-    [ApiController]
-    [Produces("application/json")]
     public class ObservabilityController : Controller
     {
         private readonly ITelemetryService _telemetryService;
@@ -45,7 +42,7 @@ namespace Piranha.Manager.Controllers
         /// Gets the health status of the application and observability stack.
         /// </summary>
         /// <returns>Health status information</returns>
-        [HttpGet("health")]
+        [HttpGet("api/health")]
         [Produces("application/json")]
         public async Task<IActionResult> GetHealth()
         {
@@ -82,7 +79,7 @@ namespace Piranha.Manager.Controllers
         /// Gets metrics summary information.
         /// </summary>
         /// <returns>Metrics summary</returns>
-        [HttpGet("metrics/summary")]
+        [HttpGet("api/metrics/summary")]
         [Produces("application/json")]
         public IActionResult GetMetricsSummary()
         {
@@ -124,7 +121,7 @@ namespace Piranha.Manager.Controllers
         /// Gets tracing information.
         /// </summary>
         /// <returns>Tracing information</returns>
-        [HttpGet("tracing/info")]
+        [HttpGet("api/tracing/info")]
         [Produces("application/json")]
         public IActionResult GetTracingInfo()
         {

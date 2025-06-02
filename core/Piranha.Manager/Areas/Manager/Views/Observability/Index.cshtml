@@ -263,7 +263,7 @@
                     },
                     loadHealth: function() {
                         var self = this;
-                        fetch('/manager/api/observability/health')
+                        fetch('/manager/observability/api/health')
                             .then(response => response.json())
                             .then(data => {
                                 self.healthData = data;
@@ -274,7 +274,7 @@
                     },
                     loadMetrics: function() {
                         var self = this;
-                        fetch('/manager/api/observability/metrics/summary')
+                        fetch('/manager/observability/api/metrics/summary')
                             .then(response => response.json())
                             .then(data => {
                                 self.metricsData = data;
@@ -285,7 +285,7 @@
                     },
                     loadTracing: function() {
                         var self = this;
-                        fetch('/manager/api/observability/tracing/info')
+                        fetch('/manager/observability/api/tracing/info')
                             .then(response => response.json())
                             .then(data => {
                                 self.tracingData = data;

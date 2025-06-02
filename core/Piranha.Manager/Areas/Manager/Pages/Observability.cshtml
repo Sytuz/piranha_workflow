@@ -44,7 +44,7 @@
                     },
                     loadHealth: function() {
                         var self = this;
-                        fetch('/manager/api/observability/health')
+                        fetch('/manager/observability/api/health')
                             .then(response => response.json())
                             .then(data => {
                                 self.health = data;
@@ -55,7 +55,7 @@
                     },
                     loadMetrics: function() {
                         var self = this;
-                        fetch('/manager/api/observability/metrics/summary')
+                        fetch('/manager/observability/api/metrics/summary')
                             .then(response => response.json())
                             .then(data => {
                                 self.metrics = data;
@@ -66,7 +66,7 @@
                     },
                     loadTracing: function() {
                         var self = this;
-                        fetch('/manager/api/observability/tracing/info')
+                        fetch('/manager/observability/api/tracing/info')
                             .then(response => response.json())
                             .then(data => {
                                 self.tracing = data;
@@ -78,7 +78,7 @@
                     createTestTrace: function() {
                         var self = this;
                         self.loading = true;
-                        fetch('/manager/api/observability/test-trace', {
+                        fetch('/manager/observability/test-trace', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
