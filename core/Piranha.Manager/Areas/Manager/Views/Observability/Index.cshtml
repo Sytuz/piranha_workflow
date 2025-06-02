@@ -1,0 +1,325 @@
+@{
+    ViewBag.Title = "Observability Dashboard";
+    ViewBag.MenuItem = "Observability";
+}
+
+<div id="observabilityApp" class="row">
+    <div class="col-sm-12">
+        <div class="widget">
+            <div class="widget-header">
+                <h4>
+                    <i class="fas fa-chart-line"></i>
+                    Observability Dashboard
+                </h4>
+            </div>
+            <div class="widget-body">
+                <div class="observability-nav mb-3">
+                    <div class="btn-group" role="group" aria-label="Observability Navigation">
+                        <button type="button" class="btn btn-primary" v-on:click="showOverview" v-bind:class="{ active: currentView === 'overview' }">
+                            <i class="fas fa-tachometer-alt"></i> Overview
+                        </button>
+                        <button type="button" class="btn btn-primary" v-on:click="showMetrics" v-bind:class="{ active: currentView === 'metrics' }">
+                            <i class="fas fa-chart-bar"></i> Metrics
+                        </button>
+                        <button type="button" class="btn btn-primary" v-on:click="showGrafana" v-bind:class="{ active: currentView === 'grafana' }">
+                            <i class="fas fa-chart-area"></i> Grafana
+                        </button>
+                        <button type="button" class="btn btn-primary" v-on:click="showTracing" v-bind:class="{ active: currentView === 'tracing' }">
+                            <i class="fas fa-project-diagram"></i> Tracing
+                        </button>
+                        <button type="button" class="btn btn-primary" v-on:click="showHealth" v-bind:class="{ active: currentView === 'health' }">
+                            <i class="fas fa-heartbeat"></i> Health
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Overview Tab -->
+                <div v-show="currentView === 'overview'" class="overview-content">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-server"></i> Service Status</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div v-if="healthData">
+                                        <div class="mb-2">
+                                            <span class="badge badge-success">{{ healthData.status || 'Loading...' }}</span>
+                                            <small class="text-muted ml-2">Last updated: {{ healthData.timestamp | formatDate }}</small>
+                                        </div>
+                                        <ul class="list-unstyled">
+                                            <li v-if="healthData.services">
+                                                <i class="fas fa-check-circle text-success"></i> 
+                                                Application: <span class="badge badge-sm badge-success">{{ healthData.services.application }}</span>
+                                            </li>
+                                            <li v-if="healthData.services">
+                                                <i class="fas fa-chart-line"></i> 
+                                                Prometheus: <span class="badge badge-sm" v-bind:class="getBadgeClass(healthData.services.prometheus)">{{ healthData.services.prometheus }}</span>
+                                            </li>
+                                            <li v-if="healthData.services">
+                                                <i class="fas fa-chart-area"></i> 
+                                                Grafana: <span class="badge badge-sm" v-bind:class="getBadgeClass(healthData.services.grafana)">{{ healthData.services.grafana }}</span>
+                                            </li>
+                                            <li v-if="healthData.services">
+                                                <i class="fas fa-project-diagram"></i> 
+                                                Jaeger: <span class="badge badge-sm" v-bind:class="getBadgeClass(healthData.services.jaeger)">{{ healthData.services.jaeger }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div v-else class="text-center">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading health data...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-bar"></i> Metrics Summary</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div v-if="metricsData">
+                                        <div class="row">
+                                            <div class="col-sm-6">
+                                                <div class="metric-item">
+                                                    <h6>Total Requests</h6>
+                                                    <span class="metric-value">{{ metricsData.totalRequests || 'N/A' }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="metric-item">
+                                                    <h6>Active Items</h6>
+                                                    <span class="metric-value">{{ metricsData.activeWorkflowItems || 'N/A' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <h6>Available Metrics:</h6>
+                                            <ul class="list-unstyled small">
+                                                <li v-for="metric in metricsData.availableMetrics" v-bind:key="metric">
+                                                    <i class="fas fa-chart-line text-info"></i> {{ metric }}
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div v-else class="text-center">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading metrics data...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-external-link-alt"></i> Quick Links</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="btn-group" role="group">
+                                        <a href="http://localhost:9090" target="_blank" class="btn btn-outline-primary">
+                                            <i class="fas fa-chart-line"></i> Prometheus
+                                        </a>
+                                        <a href="http://localhost:3000" target="_blank" class="btn btn-outline-primary">
+                                            <i class="fas fa-chart-area"></i> Grafana
+                                        </a>
+                                        <a href="http://localhost:16686" target="_blank" class="btn btn-outline-primary">
+                                            <i class="fas fa-project-diagram"></i> Jaeger
+                                        </a>
+                                        <a href="/metrics" target="_blank" class="btn btn-outline-primary">
+                                            <i class="fas fa-code"></i> Raw Metrics
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Embedded Views -->
+                <div v-show="currentView !== 'overview'" class="embedded-content">
+                    <div class="embed-responsive embed-responsive-16by9" style="height: 600px;">
+                        <iframe v-if="iframeUrl" v-bind:src="iframeUrl" class="embed-responsive-item" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+                        <div v-else class="d-flex align-items-center justify-content-center h-100">
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <p class="mt-2">Loading {{ currentView }}...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .observability-nav .btn-group .btn {
+        margin-right: 5px;
+    }
+    
+    .observability-nav .btn.active {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .metric-value {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #007bff;
+        display: block;
+    }
+    
+    .card {
+        border: 1px solid #e3e6f0;
+        border-radius: 0.35rem;
+        margin-bottom: 1rem;
+    }
+    
+    .card-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+        padding: 0.75rem 1.25rem;
+    }
+    
+    .card-header h5 {
+        margin: 0;
+        font-size: 1rem;
+        color: #5a5c69;
+    }
+    
+    .embedded-content {
+        margin-top: 20px;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for Vue to be available
+        setTimeout(function() {
+            if (typeof Vue !== 'undefined') {
+                initializeApp();
+            } else {
+                console.log('Vue not available, retrying...');
+                setTimeout(initializeApp, 1000);
+            }
+        }, 100);
+    });
+
+    function initializeApp() {
+        console.log('Initializing Vue app...');
+        console.log('Vue available:', typeof Vue !== 'undefined');
+        console.log('Element exists:', document.getElementById('observabilityApp') !== null);
+        
+        if (typeof Vue === 'undefined') {
+            console.error('Vue.js is not available');
+            return;
+        }
+
+        try {
+            var app = new Vue({
+                el: '#observabilityApp',
+                data: {
+                    currentView: 'overview',
+                    iframeUrl: '',
+                    healthData: null,
+                    metricsData: null,
+                    tracingData: null
+                },
+                filters: {
+                    formatDate: function(dateString) {
+                        if (!dateString) return '';
+                        return new Date(dateString).toLocaleString();
+                    }
+                },
+                methods: {
+                    showOverview: function() {
+                        this.currentView = 'overview';
+                        this.iframeUrl = '';
+                    },
+                    showMetrics: function() {
+                        this.currentView = 'metrics';
+                        this.iframeUrl = 'http://localhost:9090';
+                    },
+                    showGrafana: function() {
+                        this.currentView = 'grafana';
+                        this.iframeUrl = 'http://localhost:3000';
+                    },
+                    showTracing: function() {
+                        this.currentView = 'tracing';
+                        this.iframeUrl = 'http://localhost:16686';
+                    },
+                    showHealth: function() {
+                        this.currentView = 'health';
+                        this.loadHealth();
+                    },
+                    loadHealth: function() {
+                        var self = this;
+                        fetch('/manager/api/observability/health')
+                            .then(response => response.json())
+                            .then(data => {
+                                self.healthData = data;
+                            })
+                            .catch(error => {
+                                console.error('Error loading health data:', error);
+                            });
+                    },
+                    loadMetrics: function() {
+                        var self = this;
+                        fetch('/manager/api/observability/metrics/summary')
+                            .then(response => response.json())
+                            .then(data => {
+                                self.metricsData = data;
+                            })
+                            .catch(error => {
+                                console.error('Error loading metrics data:', error);
+                            });
+                    },
+                    loadTracing: function() {
+                        var self = this;
+                        fetch('/manager/api/observability/tracing/info')
+                            .then(response => response.json())
+                            .then(data => {
+                                self.tracingData = data;
+                            })
+                            .catch(error => {
+                                console.error('Error loading tracing data:', error);
+                            });
+                    },
+                    getBadgeClass: function(status) {
+                        switch(status) {
+                            case 'healthy': return 'badge-success';
+                            case 'unhealthy': return 'badge-warning';
+                            case 'unreachable': return 'badge-danger';
+                            default: return 'badge-secondary';
+                        }
+                    },
+                    refreshData: function() {
+                        this.loadHealth();
+                        this.loadMetrics();
+                        this.loadTracing();
+                    }
+                },
+                mounted: function() {
+                    console.log('Vue app mounted successfully');
+                    this.refreshData();
+                    
+                    // Refresh data every 30 seconds
+                    setInterval(this.refreshData, 30000);
+                }
+            });
+            
+            console.log('Vue app initialized successfully:', app);
+        } catch (error) {
+            console.error('Error initializing Vue app:', error);
+        }
+    }
+</script>
