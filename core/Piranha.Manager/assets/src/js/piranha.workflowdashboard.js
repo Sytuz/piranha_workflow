@@ -40,12 +40,38 @@ piranha.workflowdashboard = new function () {
                         reason: ''
                     },
                     executingAction: false,
-                    actionError: null
+                    actionError: null,
+                    // Content snapshot formatting
+                    jsonFormatted: false
                 },
                 computed: {
                     maxStageCount: function () {
                         if (!this.overview || !this.overview.stageDistribution) return 0;
                         return Math.max(...this.overview.stageDistribution.map(s => s.count), 1);
+                    },
+                    formattedContentSnapshot: function () {
+                        if (!this.changeRequestDetails || !this.changeRequestDetails.changeRequest.contentSnapshot) {
+                            return 'No content snapshot available';
+                        }
+                        
+                        var content = this.changeRequestDetails.changeRequest.contentSnapshot;
+                        
+                        // Handle empty content
+                        if (!content || content.trim() === '') {
+                            return 'Content snapshot is empty';
+                        }
+                        
+                        if (this.jsonFormatted) {
+                            try {
+                                var parsed = JSON.parse(content);
+                                return JSON.stringify(parsed, null, 2);
+                            } catch (e) {
+                                // If JSON parsing fails, show error message and original content
+                                return '// Unable to format as JSON - showing raw content:\n// Error: ' + e.message + '\n\n' + content;
+                            }
+                        } else {
+                            return content;
+                        }
                     }
                 },
                 mounted: function () {
@@ -407,6 +433,85 @@ piranha.workflowdashboard = new function () {
                         if (!dateString) return '';
                         var date = new Date(dateString);
                         return date.toLocaleString();
+                    },
+
+                    // Content snapshot methods
+                    toggleJsonFormatting: function () {
+                        this.jsonFormatted = !this.jsonFormatted;
+                        
+                        // Show feedback to user
+                        piranha.notifications.push({
+                            type: 'info',
+                            body: this.jsonFormatted ? 'JSON formatted for readability' : 'Showing raw JSON content'
+                        });
+                    },
+
+                    copyContentSnapshot: function () {
+                        if (!this.changeRequestDetails || !this.changeRequestDetails.changeRequest.contentSnapshot) {
+                            piranha.notifications.push({
+                                type: 'warning',
+                                body: 'No content snapshot available to copy.'
+                            });
+                            return;
+                        }
+
+                        var content = this.formattedContentSnapshot;
+                        var self = this;
+                        
+                        // Use the modern clipboard API if available
+                        if (navigator.clipboard && window.isSecureContext) {
+                            navigator.clipboard.writeText(content).then(function() {
+                                piranha.notifications.push({
+                                    type: 'success',
+                                    body: 'Content snapshot copied to clipboard!'
+                                });
+                            }).catch(function(err) {
+                                console.error('Failed to copy text: ', err);
+                                // Fallback to older method
+                                self.fallbackCopyTextToClipboard(content);
+                            });
+                        } else {
+                            // Fallback for older browsers
+                            this.fallbackCopyTextToClipboard(content);
+                        }
+                    },
+
+                    fallbackCopyTextToClipboard: function (text) {
+                        var textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        
+                        // Avoid scrolling to bottom
+                        textArea.style.top = "0";
+                        textArea.style.left = "0";
+                        textArea.style.position = "fixed";
+                        textArea.style.opacity = "0";
+
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+
+                        try {
+                            var successful = document.execCommand('copy');
+                            if (successful) {
+                                piranha.notifications.push({
+                                    type: 'success',
+                                    body: 'Content snapshot copied to clipboard!'
+                                });
+                            } else {
+                                piranha.notifications.push({
+                                    type: 'error',
+                                    body: 'Failed to copy content snapshot to clipboard.'
+                                });
+                            }
+                        } catch (err) {
+                            console.error('Fallback: Oops, unable to copy', err);
+                            piranha.notifications.push({
+                                type: 'error',
+                                body: 'Copy to clipboard is not supported in this browser.'
+                            });
+                        }
+
+                        document.body.removeChild(textArea);
                     },
 
                     // Chart initialization
