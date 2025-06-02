@@ -1,4 +1,3 @@
-
 piranha.workflowdashboard = new function () {
     "use strict";
 
@@ -28,7 +27,20 @@ piranha.workflowdashboard = new function () {
                         page: 1,
                         pageSize: 20
                     },
-                    changeHistoryDebounceTimeout: null
+                    changeHistoryDebounceTimeout: null,
+                    // Change request details
+                    selectedChangeRequestId: null,
+                    changeRequestDetails: null,
+                    loadingDetails: false,
+                    detailsError: null,
+                    // Action handling
+                    pendingAction: null,
+                    actionData: {
+                        comments: '',
+                        reason: ''
+                    },
+                    executingAction: false,
+                    actionError: null
                 },
                 computed: {
                     maxStageCount: function () {
@@ -193,7 +205,156 @@ piranha.workflowdashboard = new function () {
                         }
                     },
 
-                    // Helper methods
+                    // Change request details methods
+                    viewChangeRequestDetails: function (changeRequestId) {
+                        this.selectedChangeRequestId = changeRequestId;
+                        this.loadChangeRequestDetails(changeRequestId);
+                        $('#changeRequestDetailsModal').modal('show');
+                    },
+
+                    loadChangeRequestDetails: function (changeRequestId) {
+                        var self = this;
+                        self.loadingDetails = true;
+                        self.detailsError = null;
+                        self.changeRequestDetails = null;
+
+                        fetch(piranha.baseUrl + "manager/api/changerequest/" + changeRequestId + "/details", {
+                            method: "GET",
+                            headers: {
+                                "Content-Type": "application/json"
+                            }
+                        })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error("Failed to load change request details");
+                            }
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            self.changeRequestDetails = data;
+                            self.loadingDetails = false;
+                        })
+                        .catch(function (error) {
+                            console.error("Error loading change request details:", error);
+                            self.detailsError = error.message || "Failed to load change request details";
+                            self.loadingDetails = false;
+                        });
+                    },
+
+                    executeAction: function (action, changeRequestId) {
+                        this.pendingAction = action;
+                        this.selectedChangeRequestId = changeRequestId;
+                        this.actionData = {
+                            comments: '',
+                            reason: ''
+                        };
+                        this.actionError = null;
+                        $('#actionConfirmationModal').modal('show');
+                    },
+
+                    confirmAction: function () {
+                        var self = this;
+                        // Validate required fields
+                        if (self.pendingAction.type === 'reject' && !self.actionData.reason.trim()) {
+                            self.actionError = "Rejection reason is required.";
+                            return;
+                        }
+                        self.executingAction = true;
+                        self.actionError = null;
+                        var endpoint = "";
+                        var payload = {
+                            userId: piranha.userId || "00000000-0000-0000-0000-000000000000"
+                        };
+                        if (self.pendingAction.type === 'approve') {
+                            endpoint = "approve";
+                            if (self.actionData.comments) payload.comments = self.actionData.comments;
+                        } else if (self.pendingAction.type === 'reject') {
+                            endpoint = "reject";
+                            payload.reason = self.actionData.reason;
+                        } else if (self.pendingAction.type === 'edit') {
+                            endpoint = "edit";
+                        }
+                        fetch(piranha.baseUrl + "manager/api/changerequest/" + self.selectedChangeRequestId + "/" + endpoint, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                ...piranha.utils.antiForgeryHeaders()
+                            },
+                            credentials: "same-origin",
+                            body: JSON.stringify(payload)
+                        })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error("Failed to execute action");
+                            }
+                            return response.json();
+                        })
+                        .then(function (result) {
+                            self.executingAction = false;
+                            $('#actionConfirmationModal').modal('hide');
+                            $('#changeRequestDetailsModal').modal('hide');
+                            self.refreshData();
+                        })
+                        .catch(function (error) {
+                            self.executingAction = false;
+                            self.actionError = error.message || "Failed to execute action.";
+                        });
+                    },
+
+                    // Helper methods for UI
+                    getChangeStatusBadgeClass: function (status) {
+                        switch (status) {
+                            case 0: // Draft
+                                return 'badge-secondary';
+                            case 1: // Submitted
+                                return 'badge-primary';
+                            case 2: // InReview
+                                return 'badge-info';
+                            case 3: // Approved
+                                return 'badge-success';
+                            case 4: // Rejected
+                                return 'badge-danger';
+                            case 5: // Published
+                                return 'badge-success';
+                            default:
+                                return 'badge-secondary';
+                        }
+                    },
+
+                    getChangeStatusText: function (status) {
+                        switch (status) {
+                            case 0:
+                                return 'Draft';
+                            case 1:
+                                return 'Submitted';
+                            case 2:
+                                return 'In Review';
+                            case 3:
+                                return 'Approved';
+                            case 4:
+                                return 'Rejected';
+                            case 5:
+                                return 'Published';
+                            default:
+                                return 'Unknown';
+                        }
+                    },
+
+                    getActionButtonClass: function (actionType) {
+                        switch (actionType) {
+                            case 'approve':
+                                return 'btn-success';
+                            case 'reject':
+                                return 'btn-danger';
+                            case 'edit':
+                                return 'btn-primary';
+                            case 'move':
+                                return 'btn-warning';
+                            default:
+                                return 'btn-secondary';
+                        }
+                    },
+
                     getStagePercentage: function (count) {
                         if (this.maxStageCount === 0) return 0;
                         return (count / this.maxStageCount) * 100;

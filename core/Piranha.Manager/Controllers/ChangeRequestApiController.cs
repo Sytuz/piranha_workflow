@@ -389,6 +389,115 @@ namespace Piranha.Manager.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Approves the change request with the specified id.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <param name="model">The approval model</param>
+        /// <returns>The approved change request</returns>
+        [HttpPost]
+        [Route("{id}/approve")]
+        [Authorize(Policy = Permission.ChangeRequestsEdit)]
+        public async Task<IActionResult> Approve(Guid id, [FromBody] ApproveChangeRequestModel model)
+        {
+            try
+            {
+                var changeRequest = await _service.GetByIdAsync(id);
+                if (changeRequest == null)
+                {
+                    return NotFound(new ErrorMessage
+                    {
+                        Body = "Change request not found"
+                    });
+                }
+
+                var updatedChangeRequest = await _service.ApproveAsync(id, model.UserId, model.Comments);
+                return Ok(updatedChangeRequest);
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest(new ErrorMessage { Body = e.Message });
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error approving change request: {e.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Rejects the change request with the specified id.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <param name="model">The rejection model</param>
+        /// <returns>The rejected change request</returns>
+        [HttpPost]
+        [Route("{id}/reject")]
+        [Authorize(Policy = Permission.ChangeRequestsEdit)]
+        public async Task<IActionResult> Reject(Guid id, [FromBody] RejectChangeRequestModel model)
+        {
+            try
+            {
+                var changeRequest = await _service.GetByIdAsync(id);
+                if (changeRequest == null)
+                {
+                    return NotFound(new ErrorMessage
+                    {
+                        Body = "Change request not found"
+                    });
+                }
+
+                var updatedChangeRequest = await _service.RejectAsync(id, model.UserId, model.Reason);
+                return Ok(updatedChangeRequest);
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest(new ErrorMessage { Body = e.Message });
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error rejecting change request: {e.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Gets detailed information about a change request including metadata and content diff.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <returns>The detailed change request information</returns>
+        [HttpGet]
+        [Route("{id}/details")]
+        [Authorize(Policy = Permission.ChangeRequests)]
+        public async Task<IActionResult> GetDetails(Guid id)
+        {
+            try
+            {
+                var changeRequest = await _service.GetByIdAsync(id);
+                if (changeRequest == null)
+                {
+                    return NotFound(new ErrorMessage
+                    {
+                        Body = "Change request not found"
+                    });
+                }
+
+                var details = await _service.GetDetailsAsync(id);
+                return Ok(details);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error retrieving change request details: {ex.Message}"
+                });
+            }
+        }
     }
 
     /// <summary>
@@ -460,5 +569,157 @@ namespace Piranha.Manager.Controllers
         /// </summary>
         [Required]
         public Guid UserId { get; set; }
+    }
+
+    /// <summary>
+    /// Model for approving a change request.
+    /// </summary>
+    public class ApproveChangeRequestModel
+    {
+        /// <summary>
+        /// Gets/sets the user id performing the approval.
+        /// </summary>
+        [Required]
+        public Guid UserId { get; set; }
+
+        /// <summary>
+        /// Gets/sets optional approval comments.
+        /// </summary>
+        public string Comments { get; set; }
+    }
+
+    /// <summary>
+    /// Model for rejecting a change request.
+    /// </summary>
+    public class RejectChangeRequestModel
+    {
+        /// <summary>
+        /// Gets/sets the user id performing the rejection.
+        /// </summary>
+        [Required]
+        public Guid UserId { get; set; }
+
+        /// <summary>
+        /// Gets/sets the reason for rejection.
+        /// </summary>
+        [Required]
+        public string Reason { get; set; }
+    }
+
+    /// <summary>
+    /// Model for detailed change request information.
+    /// </summary>
+    public class ChangeRequestDetailsModel
+    {
+        /// <summary>
+        /// Gets/sets the change request.
+        /// </summary>
+        public ChangeRequest ChangeRequest { get; set; }
+
+        /// <summary>
+        /// Gets/sets the workflow information.
+        /// </summary>
+        public WorkflowInfo Workflow { get; set; }
+
+        /// <summary>
+        /// Gets/sets the current stage information.
+        /// </summary>
+        public StageInfo CurrentStage { get; set; }
+
+        /// <summary>
+        /// Gets/sets the content information.
+        /// </summary>
+        public ContentInfo Content { get; set; }
+
+        /// <summary>
+        /// Gets/sets the creator information.
+        /// </summary>
+        public UserInfo Creator { get; set; }
+
+        /// <summary>
+        /// Gets/sets the content diff information.
+        /// </summary>
+        public ContentDiffInfo ContentDiff { get; set; }
+
+        /// <summary>
+        /// Gets/sets available actions for this change request.
+        /// </summary>
+        public IList<AvailableAction> AvailableActions { get; set; } = new List<AvailableAction>();
+    }
+
+    /// <summary>
+    /// Model for workflow information.
+    /// </summary>
+    public class WorkflowInfo
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+    }
+
+    /// <summary>
+    /// Model for stage information.
+    /// </summary>
+    public class StageInfo
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public IList<string> AllowedRoles { get; set; } = new List<string>();
+    }
+
+    /// <summary>
+    /// Model for content information.
+    /// </summary>
+    public class ContentInfo
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string ContentType { get; set; }
+        public string EditUrl { get; set; }
+        public DateTime LastModified { get; set; }
+    }
+
+    /// <summary>
+    /// Model for user information.
+    /// </summary>
+    public class UserInfo
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public string Email { get; set; }
+    }
+
+    /// <summary>
+    /// Model for content diff information.
+    /// </summary>
+    public class ContentDiffInfo
+    {
+        public string OriginalContent { get; set; }
+        public string ModifiedContent { get; set; }
+        public IList<DiffChange> Changes { get; set; } = new List<DiffChange>();
+    }
+
+    /// <summary>
+    /// Model for a single diff change.
+    /// </summary>
+    public class DiffChange
+    {
+        public string Type { get; set; } // "added", "removed", "modified"
+        public string Field { get; set; }
+        public string OldValue { get; set; }
+        public string NewValue { get; set; }
+    }
+
+    /// <summary>
+    /// Model for available actions.
+    /// </summary>
+    public class AvailableAction
+    {
+        public string Type { get; set; } // "approve", "reject", "move", "edit"
+        public string Label { get; set; }
+        public bool Enabled { get; set; }
+        public string Icon { get; set; }
+        public object Data { get; set; } // Additional data for the action
     }
 }

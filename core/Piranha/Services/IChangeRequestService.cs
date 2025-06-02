@@ -101,5 +101,30 @@ namespace Piranha.Services
         /// <param name="targetStageId">The target stage id</param>
         /// <returns>True if the user can perform the transition</returns>
         Task<bool> CanTransitionAsync(Guid userId, Guid changeRequestId, Guid targetStageId);
+
+        /// <summary>
+        /// Approves a change request.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <param name="userId">The user performing the approval</param>
+        /// <param name="comments">Optional approval comments</param>
+        /// <returns>The updated change request</returns>
+        Task<ChangeRequest> ApproveAsync(Guid id, Guid userId, string comments = null);
+
+        /// <summary>
+        /// Rejects a change request.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <param name="userId">The user performing the rejection</param>
+        /// <param name="reason">The reason for rejection</param>
+        /// <returns>The updated change request</returns>
+        Task<ChangeRequest> RejectAsync(Guid id, Guid userId, string reason);
+
+        /// <summary>
+        /// Gets detailed information about a change request including metadata and content diff.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <returns>The detailed change request information</returns>
+        Task<object> GetDetailsAsync(Guid id);
     }
 }

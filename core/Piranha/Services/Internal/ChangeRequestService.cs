@@ -249,5 +249,169 @@ namespace Piranha.Services
             var workflow = await _workflowRepo.GetByIdAsync(workflowId).ConfigureAwait(false);
             return workflow != null && workflow.IsEnabled;
         }
+
+        /// <inheritdoc />
+        public async Task<ChangeRequest> ApproveAsync(Guid id, Guid userId, string comments = null)
+        {
+            var changeRequest = await _repo.GetByIdAsync(id).ConfigureAwait(false);
+            if (changeRequest == null)
+            {
+                throw new ValidationException("Change request not found");
+            }
+
+            // Validate that the change request can be approved
+            if (changeRequest.Status != ChangeRequestStatus.Submitted && 
+                changeRequest.Status != ChangeRequestStatus.InReview)
+            {
+                throw new ValidationException("Only submitted or in-review change requests can be approved");
+            }
+
+            // Update status to approved
+            changeRequest.Status = ChangeRequestStatus.Approved;
+            changeRequest.LastModified = DateTime.UtcNow;
+
+            // Add approval comments to notes if provided
+            if (!string.IsNullOrEmpty(comments))
+            {
+                changeRequest.Notes = string.IsNullOrEmpty(changeRequest.Notes) 
+                    ? $"Approved: {comments}" 
+                    : $"{changeRequest.Notes}\n\nApproved: {comments}";
+            }
+
+            await _repo.SaveAsync(changeRequest).ConfigureAwait(false);
+            return changeRequest;
+        }
+
+        /// <inheritdoc />
+        public async Task<ChangeRequest> RejectAsync(Guid id, Guid userId, string reason)
+        {
+            var changeRequest = await _repo.GetByIdAsync(id).ConfigureAwait(false);
+            if (changeRequest == null)
+            {
+                throw new ValidationException("Change request not found");
+            }
+
+            // Validate that the change request can be rejected
+            if (changeRequest.Status != ChangeRequestStatus.Submitted && 
+                changeRequest.Status != ChangeRequestStatus.InReview)
+            {
+                throw new ValidationException("Only submitted or in-review change requests can be rejected");
+            }
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                throw new ValidationException("Rejection reason is required");
+            }
+
+            // Update status to rejected
+            changeRequest.Status = ChangeRequestStatus.Rejected;
+            changeRequest.LastModified = DateTime.UtcNow;
+
+            // Add rejection reason to notes
+            changeRequest.Notes = string.IsNullOrEmpty(changeRequest.Notes) 
+                ? $"Rejected: {reason}" 
+                : $"{changeRequest.Notes}\n\nRejected: {reason}";
+
+            await _repo.SaveAsync(changeRequest).ConfigureAwait(false);
+            return changeRequest;
+        }
+
+        /// <inheritdoc />
+        public async Task<object> GetDetailsAsync(Guid id)
+        {
+            var changeRequest = await _repo.GetByIdAsync(id).ConfigureAwait(false);
+            if (changeRequest == null)
+            {
+                return null;
+            }
+
+            // Get workflow information
+            var workflow = await _workflowRepo.GetByIdAsync(changeRequest.WorkflowId).ConfigureAwait(false);
+            var stage = workflow?.Stages?.FirstOrDefault(s => s.Id == changeRequest.StageId);
+
+            // Build detailed information object
+            // Note: In a real implementation, you'd want to resolve actual content diffs,
+            // user information, etc. For now, we'll return basic information.
+            return new
+            {
+                ChangeRequest = changeRequest,
+                Workflow = workflow != null ? new
+                {
+                    Id = workflow.Id,
+                    Title = workflow.Title,
+                    Description = workflow.Description
+                } : null,
+                CurrentStage = stage != null ? new
+                {
+                    Id = stage.Id,
+                    Title = stage.Title,
+                    Description = stage.Description
+                } : null,
+                Content = new
+                {
+                    Id = changeRequest.ContentId,
+                    Title = changeRequest.Title,
+                    ContentType = "Unknown", // Would need content type resolution
+                    EditUrl = $"/manager/page/edit/{changeRequest.ContentId}", // Basic URL pattern
+                    LastModified = changeRequest.LastModified
+                },
+                Creator = new
+                {
+                    Id = changeRequest.CreatedById,
+                    Name = "Unknown User", // Would need user resolution
+                    Email = ""
+                },
+                ContentDiff = new
+                {
+                    OriginalContent = "", // Would need to resolve original content
+                    ModifiedContent = changeRequest.ContentSnapshot,
+                    Changes = new List<object>() // Would need diff computation
+                },
+                AvailableActions = GetAvailableActions(changeRequest)
+            };
+        }
+
+        /// <summary>
+        /// Gets available actions for a change request based on its current status.
+        /// </summary>
+        private List<object> GetAvailableActions(ChangeRequest changeRequest)
+        {
+            var actions = new List<object>();
+
+            switch (changeRequest.Status)
+            {
+                case ChangeRequestStatus.Submitted:
+                case ChangeRequestStatus.InReview:
+                    actions.Add(new
+                    {
+                        Type = "approve",
+                        Label = "Approve",
+                        Enabled = true,
+                        Icon = "fas fa-check",
+                        Data = new { }
+                    });
+                    actions.Add(new
+                    {
+                        Type = "reject",
+                        Label = "Reject",
+                        Enabled = true,
+                        Icon = "fas fa-times",
+                        Data = new { }
+                    });
+                    break;
+                case ChangeRequestStatus.Draft:
+                    actions.Add(new
+                    {
+                        Type = "edit",
+                        Label = "Edit",
+                        Enabled = true,
+                        Icon = "fas fa-edit",
+                        Data = new { }
+                    });
+                    break;
+            }
+
+            return actions;
+        }
     }
 }
