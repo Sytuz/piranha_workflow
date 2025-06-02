@@ -189,6 +189,35 @@
             .sortable-item { flex-direction: column; }
             .stage-color-bar { height: 16px; width: 100%; min-width: 0; border-radius: 8px 8px 0 0; margin-right: 0; margin-bottom: 0.5rem; }
         }
+
+        /* Back to top button styles */
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: rgb(0, 126, 170);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .back-to-top:hover {
+            background: rgb(0, 105, 140);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+        }
+        .back-to-top.show {
+            display: flex;
+        }
     </style>
 
     <script>
@@ -236,6 +265,28 @@
                     }, 100);
                 });
             }, 200);
+        });
+
+        // Back to top button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const backToTopButton = document.getElementById('backToTop');
+            
+            // Show/hide button based on scroll position
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    backToTopButton.classList.add('show');
+                } else {
+                    backToTopButton.classList.remove('show');
+                }
+            });
+            
+            // Smooth scroll to top when clicked
+            backToTopButton.addEventListener('click', function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
         });
     </script>
 }
@@ -403,3 +454,8 @@
         </div>
     </div>
 </div>
+
+<!-- Back to top button -->
+<button id="backToTop" class="back-to-top" title="Back to top" aria-label="Back to top">
+    <i class="fas fa-chevron-up"></i>
+</button>
