@@ -8,6 +8,9 @@ using Piranha.Manager.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to listen on all interfaces for Docker accessibility
+builder.WebHost.UseUrls("http://0.0.0.0:5000", "https://0.0.0.0:5001");
+
 builder.AddPiranha(options =>
 {
     /**

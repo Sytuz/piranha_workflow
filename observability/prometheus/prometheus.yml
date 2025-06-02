@@ -14,19 +14,19 @@ scrape_configs:
   # Node Exporter for system metrics
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['localhost:9100']
+      - targets: ['node-exporter:9100']  # Using Docker service name
     scrape_interval: 5s
 
   # cAdvisor for container metrics
   - job_name: 'cadvisor'
     static_configs:
-      - targets: ['localhost:8080']
+      - targets: ['cadvisor:8080']  # Using Docker service name
     scrape_interval: 5s
 
   # Piranha CMS Application metrics
   - job_name: 'piranha-cms'
     static_configs:
-      - targets: ['localhost:5000']  # Using host network mode
+      - targets: ['172.19.0.1:5000']  # Using Docker network gateway IP
     scrape_interval: 5s
     metrics_path: '/metrics'
 
