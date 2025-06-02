@@ -617,32 +617,6 @@
       ],
       "title": "Workflow Queue Status",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 27
-      },
-      "id": 23,
-      "panels": [],
-      "title": "Distributed Tracing",
-      "type": "row"
-    },
-    {
-      "datasource": "Jaeger",
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 28
-      },
-      "id": 9,
-      "title": "Workflow Request Traces",
-      "type": "jaeger"
     }
   ],
   "refresh": "5s",

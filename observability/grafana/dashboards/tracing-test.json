@@ -1,0 +1,56 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Jaeger Tracing Test",
+    "tags": ["piranha", "tracing"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Recent Traces",
+        "type": "table",
+        "targets": [
+          {
+            "datasource": {
+              "type": "jaeger",
+              "uid": "jaeger"
+            },
+            "queryType": "",
+            "refId": "A",
+            "query": "1.0.0.Piranha.RazorWeb"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "displayMode": "list",
+              "filterable": false
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

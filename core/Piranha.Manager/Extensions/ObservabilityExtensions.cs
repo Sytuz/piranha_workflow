@@ -60,8 +60,9 @@ namespace Piranha.Manager.Extensions
                         .AddSource("Piranha.Workflow")
                         .AddJaegerExporter(options =>
                         {
-                            options.AgentHost = "localhost";
-                            options.AgentPort = 6831;
+                            // Use Jaeger collector HTTP endpoint instead of UDP agent
+                            options.Endpoint = new Uri("http://localhost:14268/api/traces");
+                            options.Protocol = OpenTelemetry.Exporter.JaegerExportProtocol.HttpBinaryThrift;
                         });
                 })
                 .WithMetrics(metrics =>
