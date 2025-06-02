@@ -60,6 +60,7 @@ namespace Piranha.Repositories
                         SortOrder = s.SortOrder,
                         IsPublished = s.IsPublished,
                         Color = s.Color,
+                        IsImmutable = s.IsImmutable, // Add this line
                         Roles = s.Roles.Select(r => new Models.WorkflowStageRole
                         {
                             Id = r.Id,
@@ -124,6 +125,7 @@ namespace Piranha.Repositories
                         SortOrder = s.SortOrder,
                         IsPublished = s.IsPublished,
                         Color = s.Color,
+                        IsImmutable = s.IsImmutable, // Add this line
                         Roles = s.Roles.Select(r => new Models.WorkflowStageRole
                         {
                             Id = r.Id,
@@ -188,6 +190,7 @@ namespace Piranha.Repositories
                     {
                         Id = stage.Id != Guid.Empty ? stage.Id : Guid.NewGuid(),
                         WorkflowId = workflow.Id
+                        // IsImmutable will be set below
                     };
                     await _db.WorkflowStages.AddAsync(dbStage);
                 }
@@ -197,6 +200,7 @@ namespace Piranha.Repositories
                 dbStage.SortOrder = stage.SortOrder;
                 dbStage.IsPublished = stage.IsPublished;
                 dbStage.Color = stage.Color;
+                dbStage.IsImmutable = stage.IsImmutable; // Add this line
 
                 // Handle roles - remove existing and add new ones if provided
                 if (stage.Roles != null)

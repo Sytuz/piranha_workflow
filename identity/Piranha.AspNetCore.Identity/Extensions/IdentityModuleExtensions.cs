@@ -17,6 +17,7 @@ using Microsoft.Extensions.FileProviders;
 using Piranha;
 using Piranha.AspNetCore.Identity;
 using Piranha.AspNetCore.Identity.Data;
+using Piranha.AspNetCore.Identity.Security;
 using Piranha.Manager;
 using Piranha.Manager.LocalAuth;
 
@@ -113,9 +114,7 @@ public static class IdentityModuleExtensions
                 policy.RequireClaim(Permissions.Users, Permissions.Users);
                 policy.RequireClaim(Permissions.UsersSave, Permissions.UsersSave);
             });
-        });
-
-        services.AddDbContext<T>(dbOptions);
+        });        services.AddDbContext<T>(dbOptions);
         services.AddScoped<IDb, T>();
         services.AddScoped<T, T>();
         services.AddIdentity<User, Role>()
@@ -124,6 +123,7 @@ public static class IdentityModuleExtensions
         services.Configure(identityOptions != null ? identityOptions : SetDefaultOptions);
         services.ConfigureApplicationCookie(cookieOptions != null ? cookieOptions : SetDefaultCookieOptions);
         services.AddScoped<ISecurity, IdentitySecurity>();
+        services.AddScoped<Piranha.Security.IRoleProvider, IdentityRoleProvider>();
 
         return services;
     }
@@ -202,9 +202,7 @@ public static class IdentityModuleExtensions
         options.LoginPath = "/manager/login";
         options.AccessDeniedPath = "/manager/login";
         options.SlidingExpiration = true;
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Uses the Piranha identity module.
     /// </summary>
     /// <param name="builder">The current application builder</param>
@@ -213,6 +211,14 @@ public static class IdentityModuleExtensions
     {
         // Set logout url to point to local auth
         Piranha.App.Modules.Manager().LogoutUrl = "~/manager/logout";
+
+        // Set up the role provider
+        var serviceProvider = builder.ApplicationServices;
+        var roleProvider = serviceProvider.GetService<Piranha.Security.IRoleProvider>();
+        if (roleProvider != null)
+        {
+            Piranha.App.Roles.SetProvider(roleProvider);
+        }
 
         //
         // Add the embedded resources

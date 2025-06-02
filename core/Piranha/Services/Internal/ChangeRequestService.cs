@@ -102,41 +102,72 @@ namespace Piranha.Services
         {
             // Validate required fields
             if (string.IsNullOrWhiteSpace(title))
-                throw new ValidationException("Title is required");
+            {
+            Console.WriteLine($"[ChangeRequestService] CreateAsync failed: Title is required");
+            throw new ValidationException("Title is required");
+            }
             if (workflowId == Guid.Empty)
-                throw new ValidationException("WorkflowId is required");
+            {
+            Console.WriteLine($"[ChangeRequestService] CreateAsync failed: WorkflowId is required");
+            throw new ValidationException("WorkflowId is required");
+            }
             if (createdById == Guid.Empty)
-                throw new ValidationException("CreatedById is required");
+            {
+            Console.WriteLine($"[ChangeRequestService] CreateAsync failed: CreatedById is required");
+            throw new ValidationException("CreatedById is required");
+            }
             if (contentId == Guid.Empty)
-                throw new ValidationException("ContentId is required");
+            {
+            Console.WriteLine($"[ChangeRequestService] CreateAsync failed: ContentId is required");
+            throw new ValidationException("ContentId is required");
+            }
             if (string.IsNullOrWhiteSpace(contentSnapshot))
-                throw new ValidationException("ContentSnapshot is required");
+            {
+            Console.WriteLine($"[ChangeRequestService] CreateAsync failed: ContentSnapshot is required");
+            throw new ValidationException("ContentSnapshot is required");
+            }
+
+            Console.WriteLine($"[ChangeRequestService] CreateAsync called with title: {title}, workflowId: {workflowId}, createdById: {createdById}, contentId: {contentId}");
 
             // Validate that the workflow exists
             var workflow = await _workflowRepo.GetByIdAsync(workflowId).ConfigureAwait(false);
             if (workflow == null)
-                throw new ValidationException("Specified workflow does not exist");
+            {
+            Console.WriteLine($"[ChangeRequestService] CreateAsync failed: Workflow {workflowId} not found");
+            throw new ValidationException("Specified workflow does not exist");
+            }
+
+            Console.WriteLine($"[ChangeRequestService] Found workflow: {workflow.Title} with {workflow.Stages?.Count ?? 0} stages");
 
             var firstStage = workflow.Stages?.OrderBy(s => s.SortOrder).FirstOrDefault();
             if (firstStage == null)
-                throw new ValidationException("Workflow has no stages defined");
+            {
+            Console.WriteLine($"[ChangeRequestService] CreateAsync failed: Workflow {workflowId} has no stages");
+            throw new ValidationException("Workflow has no stages defined");
+            }
+
+            Console.WriteLine($"[ChangeRequestService] First stage found: {firstStage.Title} (ID: {firstStage.Id})");
 
             var changeRequest = new ChangeRequest
             {
-                Id = Guid.NewGuid(),
-                Title = title,
-                WorkflowId = workflowId,
-                StageId = firstStage.Id,
-                CreatedById = createdById,
-                ContentId = contentId,
-                ContentSnapshot = contentSnapshot,
-                Notes = notes,
-                Status = ChangeRequestStatus.Draft,
-                CreatedAt = DateTime.Now,
-                LastModified = DateTime.Now
+            Id = Guid.NewGuid(),
+            Title = title,
+            WorkflowId = workflowId,
+            StageId = firstStage.Id,
+            CreatedById = createdById,
+            ContentId = contentId,
+            ContentSnapshot = contentSnapshot,
+            Notes = notes,
+            Status = ChangeRequestStatus.Draft,
+            CreatedAt = DateTime.Now,
+            LastModified = DateTime.Now
             };
 
+            Console.WriteLine($"[ChangeRequestService] Creating change request with ID: {changeRequest.Id}");
+
             await _repo.SaveAsync(changeRequest).ConfigureAwait(false);
+            
+            Console.WriteLine($"[ChangeRequestService] Change request {changeRequest.Id} created successfully");
             return changeRequest;
         }
 

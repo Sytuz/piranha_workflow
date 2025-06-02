@@ -10,20 +10,24 @@
 
 using Piranha.Models;
 using Piranha.Repositories;
+using System.ComponentModel.DataAnnotations; // Added for ValidationException
 
 namespace Piranha.Services;
 
 public class WorkflowStageRelationService : IWorkflowStageRelationService
 {
     private readonly IWorkflowStageRelationRepository _repo;
+    private readonly IWorkflowStageRepository _stageRepo; // Added
 
     /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="repo">The workflow stage relation repository</param>
-    public WorkflowStageRelationService(IWorkflowStageRelationRepository repo)
+    /// <param name="stageRepo">The workflow stage repository</param> // Added
+    public WorkflowStageRelationService(IWorkflowStageRelationRepository repo, IWorkflowStageRepository stageRepo) // Modified
     {
         _repo = repo;
+        _stageRepo = stageRepo; // Added
     }
 
     /// <inheritdoc />
@@ -53,6 +57,13 @@ public class WorkflowStageRelationService : IWorkflowStageRelationService
     /// <inheritdoc />
     public async Task SaveAsync(WorkflowStageRelation relation)
     {
+        // Validate that the "Published" stage (IsPublished=true, IsImmutable=true) cannot be a source stage
+        var sourceStage = await _stageRepo.GetById(relation.SourceStageId).ConfigureAwait(false);
+        if (sourceStage != null && sourceStage.IsPublished && sourceStage.IsImmutable)
+        {
+            throw new ValidationException("The 'Published' stage cannot be the source of new relations.");
+        }
+
         // Set a new id if not set
         if (relation.Id == Guid.Empty)
         {

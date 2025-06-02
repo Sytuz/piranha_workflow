@@ -17,7 +17,6 @@ namespace Piranha.Data.EF.SQLite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Title = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
-                    Content = table.Column<string>(type: "TEXT", nullable: false),
                     WorkflowId = table.Column<Guid>(type: "TEXT", nullable: false),
                     StageId = table.Column<Guid>(type: "TEXT", nullable: false),
                     CreatedById = table.Column<Guid>(type: "TEXT", nullable: false),

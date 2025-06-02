@@ -48,6 +48,7 @@ namespace Piranha.Repositories
                     SortOrder = s.SortOrder,
                     IsPublished = s.IsPublished,
                     Color = s.Color,
+                    IsImmutable = s.IsImmutable,
                     Roles = s.Roles.Select(r => new Models.WorkflowStageRole
                     {
                         Id = r.Id,
@@ -80,6 +81,7 @@ namespace Piranha.Repositories
                     SortOrder = stage.SortOrder,
                     IsPublished = stage.IsPublished,
                     Color = stage.Color,
+                    IsImmutable = stage.IsImmutable,
                     Roles = stage.Roles.Select(r => new Models.WorkflowStageRole
                     {
                         Id = r.Id,
@@ -111,6 +113,7 @@ namespace Piranha.Repositories
                     SortOrder = s.SortOrder,
                     IsPublished = s.IsPublished,
                     Color = s.Color,
+                    IsImmutable = s.IsImmutable,
                     Roles = s.Roles.Select(r => new Models.WorkflowStageRole
                     {
                         Id = r.Id,
@@ -146,6 +149,7 @@ namespace Piranha.Repositories
             dbStage.SortOrder = stage.SortOrder;
             dbStage.IsPublished = stage.IsPublished;
             dbStage.Color = stage.Color;
+            dbStage.IsImmutable = stage.IsImmutable;
 
             // Handle roles - remove existing and add new ones if provided
             if (stage.Roles != null)

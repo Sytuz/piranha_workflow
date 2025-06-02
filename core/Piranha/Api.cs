@@ -145,7 +145,8 @@ public sealed class Api : IApi, IDisposable
         IPostRepository postRepository,
         IPostTypeRepository postTypeRepository,
         ISiteRepository siteRepository,
-        ISiteTypeRepository siteTypeRepository,        IWorkflowRepository workflowRepository,
+        ISiteTypeRepository siteTypeRepository,
+        IWorkflowRepository workflowRepository,
         IWorkflowStageRepository workflowStageRepository,
         IWorkflowStageRelationRepository workflowStageRelationRepository,
         IWorkflowStageRoleRepository workflowStageRoleRepository,
@@ -169,7 +170,7 @@ public sealed class Api : IApi, IDisposable
           // Create workflow services
         Workflows = new WorkflowService(workflowRepository);
         WorkflowStages = new WorkflowStageService(workflowStageRepository, workflowStageRoleRepository);
-        WorkflowStageRelations = new WorkflowStageRelationService(workflowStageRelationRepository);
+        WorkflowStageRelations = new WorkflowStageRelationService(workflowStageRelationRepository, workflowStageRepository);
         WorkflowStageRoles = workflowStageRoleRepository;
         ChangeRequests = new ChangeRequestService(changeRequestRepository, workflowRepository, workflowStageRepository);
 

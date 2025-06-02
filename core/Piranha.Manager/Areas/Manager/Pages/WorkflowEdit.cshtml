@@ -62,6 +62,162 @@
             text-align: center;
             color: #6c757d;
         }
+
+        /* Color picker styles */
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-picker-input {
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            border: 1px solid #dee2e6;
+            transition: border-color 0.2s;
+        }
+        .color-picker-input:focus {
+            outline: none;
+            border-color: #80bdff;
+        }
+        .color-picker-hex {
+            font-family: monospace;
+            font-size: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.25rem;
+            border: 1px solid #dee2e6;
+            padding: 0.25rem 0.5rem;
+            color: #333;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .stage-color-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 28px;
+            min-width: 0;
+            height: 100%;
+            border-radius: 0.25rem 0 0 0.25rem;
+            background: var(--stage-color, #cccccc);
+            box-shadow: 0 0 2px rgba(0,0,0,0.06);
+            z-index: 2;
+            transition: background 0.2s;
+        }
+        .sortable-item {
+            display: flex;
+            align-items: stretch;
+            margin-bottom: 1.5rem;
+            background: #fff;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            border: 1px solid #dee2e6;
+            position: relative;
+            padding-left: 28px; /* Match color bar width */
+            overflow: hidden;
+        }
+        .actions-move {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0.5rem 0.5rem 0 0.5rem;
+            min-width: 40px;
+            z-index: 3;
+        }
+        .color-picker-circle {
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 50%;
+            border: 2px solid #dee2e6;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            cursor: pointer;
+            padding: 0;
+            background: none;
+            transition: border-color 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            /* Remove default inner square for color input */
+            overflow: hidden;
+        }
+        .color-picker-circle::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: 50%;
+        }
+        .color-picker-circle::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .color-picker-circle::-moz-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .color-picker-circle::-ms-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .color-picker-circle:focus {
+            outline: none;
+            border-color: #80bdff;
+        }
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-picker-hex {
+            font-family: monospace;
+            font-size: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.25rem;
+            border: 1px solid #dee2e6;
+            padding: 0.25rem 0.5rem;
+            color: #333;
+            min-width: 80px;
+            text-align: center;
+        }
+        .actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Changed from flex-start */
+            align-items: center; /* Changed from flex-end */
+            padding: 0.5rem;
+            min-width: 40px;
+        }
+        @@media (max-width: 600px) {
+            .sortable-item { flex-direction: column; }
+            .stage-color-bar { height: 16px; width: 100%; min-width: 0; border-radius: 8px 8px 0 0; margin-right: 0; margin-bottom: 0.5rem; }
+        }
+
+        /* Back to top button styles */
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: rgb(0, 126, 170);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .back-to-top:hover {
+            background: rgb(0, 105, 140);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+        }
+        .back-to-top.show {
+            display: flex;
+        }
     </style>
 
     <script>
@@ -110,6 +266,28 @@
                 });
             }, 200);
         });
+
+        // Back to top button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const backToTopButton = document.getElementById('backToTop');
+            
+            // Show/hide button based on scroll position
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    backToTopButton.classList.add('show');
+                } else {
+                    backToTopButton.classList.remove('show');
+                }
+            });
+            
+            // Smooth scroll to top when clicked
+            backToTopButton.addEventListener('click', function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        });
     </script>
 }
 
@@ -125,7 +303,7 @@
 
         <div class="container-fluid app" :class="{ ready: !loading }">
             <div class="top-nav">
-                <button v-on:click.prevent="save" class="btn btn-success btn-labeled">
+                <button v-if="!isDefault" v-on:click.prevent="save" class="btn btn-success btn-labeled">
                     <i class="fas fa-check"></i>@Localizer.General["Save"]
                 </button>
             </div>
@@ -138,15 +316,15 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col">
-                        <div class="form-group title">
-                            <input v-model="title" type="text" class="form-control form-control-lg" placeholder="@Localizer.Workflow["Your workflow title"]">
+                        <div class="form-group title" style="text-align: left; margin-left: 0 !important; margin-right: auto !important;">
+                            <input v-model="title" type="text" class="form-control form-control-lg" placeholder="@Localizer.Workflow["Your workflow title"]" :disabled="isDefault" style="text-align: left; margin: 0 !important;">
                         </div>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col">
                         <div class="form-group">
-                            <textarea v-model="description" class="form-control" placeholder="@Localizer.General["Description"]" rows="3"></textarea>
+                            <textarea v-model="description" class="form-control" placeholder="@Localizer.General["Description"]" rows="3" :disabled="isDefault"></textarea>
                         </div>
                     </div>
                 </div>
@@ -179,57 +357,86 @@
             <div class="card-body">
                 <div class="sortable">
                     <div v-for="(stage, index) in stages" class="sortable-item">
+                        <!-- Colored gradient bar as left border -->
+                        <div class="stage-color-bar" :style="{'--stage-color': stage.color || '#cccccc'}"></div>
                         <div class="actions-move">
-                            <button v-on:click.prevent="moveStageUp(index)" class="btn btn-sm" :disabled="index === 0">
+                            <button v-on:click.prevent="moveStageUp(index)" class="btn btn-sm" :disabled="index === 0 || stage.isImmutable || stages[index-1] && stages[index-1].isImmutable">
                                 <i class="fas fa-chevron-up"></i>
                             </button>
-                            <button v-on:click.prevent="moveStageDown(index)" class="btn btn-sm" :disabled="index === stages.length - 1">
+                            <button v-on:click.prevent="moveStageDown(index)" class="btn btn-sm" :disabled="index === stages.length - 1 || stage.isImmutable || stages[index+1] && stages[index+1].isImmutable">
                                 <i class="fas fa-chevron-down"></i>
                             </button>
                         </div>
-                        <div class="content">
+                        <div class="content" style="flex:1;">
                             <div class="form-group">
-                                <input v-model="stage.title" type="text" class="form-control" placeholder="@Localizer.Workflow["Stage name"]">
+                                <input v-model="stage.title" type="text" class="form-control" placeholder="@Localizer.Workflow["Stage name"]" :readonly="stage.isImmutable">
                             </div>
                             <div class="form-group">
-                                <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]"></textarea>
+                                <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]" :readonly="stage.isImmutable"></textarea>
                             </div>
                             <div class="form-group">
-                                <label>@Localizer.Workflow["Authorized Roles"]</label>
-                                <div class="checkbox-list">
+                                <label class="mb-0">@Localizer.Workflow["Stage Color"]</label>
+                                <small class="form-text text-muted mb-2 mt-0">@Localizer.Workflow["Choose a color for this stage (optional)"]</small>
+                                <div class="input-group color-picker-group align-items-center mt-1" style="max-width: 220px;">
+                                    <input
+                                        type="color"
+                                        :value="stage.color"
+                                        class="color-picker-circle"
+                                        v-on:change="onStageColorChange(stage, $event)"
+                                        style="background: none;"
+                                        :disabled="stage.isImmutable"
+                                    />
+                                    <input
+                                        type="text"
+                                        class="form-control color-picker-hex"
+                                        :value="stage.color"
+                                        readonly
+                                        tabindex="-1"
+                                    />
+                                </div>
+                            </div>
+                            <div class="form-group" v-if="!isRoleEditingDisabled(stage) && stage.title !== 'Published'">
+                                <label class="mb-0">@Localizer.Workflow["Authorized Roles"]</label>
+                                <small class="form-text text-muted mb-2 mt-0">@Localizer.Workflow["Select which roles can perform actions in this stage"]</small>
+                                <div class="checkbox-list mt-1">
                                     <div v-for="role in availableRoles" :key="role.id" class="form-check">
                                         <input class="form-check-input" 
                                                type="checkbox" 
                                                :id="'role-' + stage.id + '-' + role.id"
                                                :value="role.id" 
                                                :checked="stage.roleIds && stage.roleIds.includes(role.id)"
-                                               @@change="toggleStageRole(stage, role.id, $event)">
+                                               v-on:change="toggleStageRole(stage, role.id, $event)"
+                                               :disabled="isRoleEditingDisabled(stage) || isDefault">
                                         <label class="form-check-label" :for="'role-' + stage.id + '-' + role.id">
                                             {{ role.name }}
                                         </label>
                                     </div>
                                 </div>
-                                <small class="form-text text-muted">@Localizer.Workflow["Select which roles can perform actions in this stage"]</small>
+                                <div class="mt-2" v-if="!isRoleEditingDisabled(stage) && availableRoles.length > 0"> 
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-1" :disabled="isRoleEditingDisabled(stage) || isDefault" @@click="selectAllRoles(stage)">@Localizer.General["Select All"]</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isRoleEditingDisabled(stage) || isDefault" @@click="deselectAllRoles(stage)">@Localizer.General["Deselect All"]</button>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>@Localizer.Workflow["Stage Relations"]</label>
-                                <div class="checkbox-list">
+                            <div class="form-group" v-if="!isRelationEditingDisabled(stage) && stage.title !== 'Published'">
+                                <label class="mb-0">@Localizer.Workflow["Stage Relations"]</label>
+                                <small class="form-text text-muted mb-2 mt-0">@Localizer.Workflow["Select which stages this stage can transition to"]</small>
+                                <div class="checkbox-list mt-1">
                                     <div v-for="targetStage in getOtherStages(stage.id)" :key="targetStage.id" class="form-check">
                                         <input class="form-check-input" 
                                                type="checkbox" 
                                                :id="'relation-' + stage.id + '-' + targetStage.id"
                                                :checked="canTransitionTo(stage.id, targetStage.id)"
-                                               @@change="toggleStageRelation(stage.id, targetStage.id, $event)">
+                                               v-on:change="toggleStageRelation(stage.id, targetStage.id, $event)"
+                                               :disabled="isRelationEditingDisabled(stage) || isDefault">
                                         <label class="form-check-label" :for="'relation-' + stage.id + '-' + targetStage.id">
                                             → {{ targetStage.title }}
                                         </label>
                                     </div>
                                 </div>
-                                <small class="form-text text-muted">@Localizer.Workflow["Select which stages this stage can transition to"]</small>
                             </div>
                         </div>
                         <div class="actions">
-                            <button v-on:click.prevent="removeStage(index)" class="btn btn-sm danger">
+                            <button v-if="!stage.isImmutable" v-on:click.prevent="removeStage(index)" class="btn btn-sm danger d-flex justify-content-center align-items-center" :disabled="stage.isImmutable">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -238,7 +445,7 @@
                         <p>@Localizer.Workflow["No stages have been added yet."]</p>
                     </div>
                     <div class="addbutton">
-                        <button v-on:click.prevent="addStage" class="btn btn-sm btn-primary">
+                        <button v-if="!isDefault" v-on:click.prevent="addStage" class="btn btn-sm btn-primary">
                             <i class="fas fa-plus"></i> @Localizer.Workflow["Add stage"]
                         </button>
                     </div>
@@ -247,3 +454,8 @@
         </div>
     </div>
 </div>
+
+<!-- Back to top button -->
+<button id="backToTop" class="back-to-top" title="Back to top" aria-label="Back to top">
+    <i class="fas fa-chevron-up"></i>
+</button>

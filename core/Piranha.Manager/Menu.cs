@@ -64,7 +64,8 @@ public static class Menu
                 {
                     InternalId = "Aliases", Name = "Aliases", Route = "~/manager/aliases",
                     Policy = Permission.Aliases, Css = "fas fa-random"
-                },                new MenuItem
+                },
+                new MenuItem
                 {
                     InternalId = "Workflows",
                     Name = "Workflows",
@@ -104,6 +105,14 @@ public static class Menu
                     Route = "~/manager/modules",
                     Policy = Permission.Modules,
                     Css = "fas fa-code-branch"
+                },
+                new MenuItem
+                {
+                    InternalId = "Observability",
+                    Name = "Observability",
+                    Route = "~/manager/observability",
+                    Policy = Permission.Admin,
+                    Css = "fas fa-chart-line"
                 }
             }
         }

@@ -34,26 +34,26 @@ namespace Piranha.Manager.Models
         public string UserId { get; private set; }
 
         /// <summary>
-        /// Gets the default workflow ID.
+        /// Gets the workflow ID.
         /// </summary>
-        public Guid? DefaultWorkflowId { get; private set; }
+        public Guid? WorkflowId { get; private set; }
 
         public async Task OnGetAsync()
         {
             // Get current user ID
             UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // Get default workflow
+            // Get workflow
             try
             {
                 var workflows = await _workflowService.GetAllAsync();
-                var defaultWorkflow = workflows.FirstOrDefault(w => w.IsDefault && w.IsEnabled);
-                DefaultWorkflowId = defaultWorkflow?.Id;
+                var workflow = workflows.FirstOrDefault(w => w.IsEnabled);
+                WorkflowId = workflow?.Id;
             }
             catch (Exception)
             {
                 // If there's an error getting workflows, set to null
-                DefaultWorkflowId = null;
+                WorkflowId = null;
             }
         }
     }

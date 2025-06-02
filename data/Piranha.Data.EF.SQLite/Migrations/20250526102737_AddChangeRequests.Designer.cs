@@ -160,10 +160,6 @@ namespace Piranha.Data.EF.SQLite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid?>("ContentId")
                         .HasColumnType("TEXT");
 
