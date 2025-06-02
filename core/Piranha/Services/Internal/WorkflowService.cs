@@ -153,6 +153,12 @@ public class WorkflowService : IWorkflowService
             throw new ValidationException("Cannot delete the active workflow. Please enable another workflow first.");
         }
 
+        // Prevent deleting the default workflow.
+        if (workflowToDelete.IsDefault)
+        {
+            throw new ValidationException("Cannot delete the default workflow.");
+        }
+
         await _repo.DeleteAsync(id).ConfigureAwait(false);
     }
 
