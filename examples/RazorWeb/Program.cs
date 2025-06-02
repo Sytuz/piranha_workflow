@@ -77,7 +77,8 @@ app.UsePiranha(options =>
     EditorConfig.FromFile("editorconfig.json");
 
     // Add observability middleware
-    options.UseObservability();    options.UseManager();
+    options.UseObservability();
+    options.UseManager();
     options.UseTinyMCE();
     options.UseIdentity();
 });

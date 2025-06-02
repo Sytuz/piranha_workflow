@@ -85,12 +85,15 @@ services:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: piranha-cadvisor
     restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
     volumes:
       - /:/rootfs:ro
-      - /var/run:/var/run:rw
+      - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
-      - /cgroup:/cgroup:ro
+      - /sys/fs/cgroup:/cgroup:ro
     ports:
       - "8080:8080"
     networks:
