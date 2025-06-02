@@ -1,0 +1,424 @@
+@page "~/manager/observability"
+@model Piranha.Manager.Areas.Manager.Pages.ObservabilityModel
+@inject ManagerLocalizer Localizer
+@{
+    ViewBag.Title = Localizer.General["Observability Dashboard"];
+    ViewBag.MenuItem = "Observability";
+}
+@section script
+{
+    <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script>
+        // Wait for both DOMContentLoaded and ensure Vue is loaded
+        function initializeApp() {
+            console.log('Initializing Vue app...');
+            console.log('Vue available:', typeof Vue !== 'undefined');
+            console.log('Element exists:', document.getElementById('observability-dashboard') !== null);
+            
+            if (typeof Vue === 'undefined') {
+                console.error('Vue.js is not loaded!');
+                return;
+            }
+            
+            var element = document.getElementById('observability-dashboard');
+            if (!element) {
+                console.error('observability-dashboard element not found!');
+                return;
+            }
+            
+            try {
+                var app = new Vue({
+                    el: '#observability-dashboard',
+                    data: {
+                        loading: false,
+                        activeTab: 'metrics',
+                        health: null,
+                        metrics: null,
+                        tracing: null,
+                        autoRefresh: false,
+                        refreshInterval: null
+                    },
+                methods: {
+                    setActiveTab: function(tab) {
+                        this.activeTab = tab;
+                    },
+                    loadHealth: function() {
+                        var self = this;
+                        fetch('/manager/observability/api/health')
+                            .then(response => response.json())
+                            .then(data => {
+                                self.health = data;
+                            })
+                            .catch(error => {
+                                console.error('Error loading health data:', error);
+                            });
+                    },
+                    loadMetrics: function() {
+                        var self = this;
+                        fetch('/manager/observability/api/metrics/summary')
+                            .then(response => response.json())
+                            .then(data => {
+                                self.metrics = data;
+                            })
+                            .catch(error => {
+                                console.error('Error loading metrics data:', error);
+                            });
+                    },
+                    loadTracing: function() {
+                        var self = this;
+                        fetch('/manager/observability/api/tracing/info')
+                            .then(response => response.json())
+                            .then(data => {
+                                self.tracing = data;
+                            })
+                            .catch(error => {
+                                console.error('Error loading tracing data:', error);
+                            });
+                    },
+                    createTestTrace: function() {
+                        var self = this;
+                        self.loading = true;
+                        fetch('/manager/observability/test-trace', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            self.loading = false;
+                            alert('Test trace created! Trace ID: ' + data.traceId);
+                            if (data.jaegerUrl) {
+                                window.open(data.jaegerUrl, '_blank');
+                            }
+                        })
+                        .catch(error => {
+                            self.loading = false;
+                            console.error('Error creating test trace:', error);
+                        });
+                    },
+                    toggleAutoRefresh: function() {
+                        this.autoRefresh = !this.autoRefresh;
+                        if (this.autoRefresh) {
+                            this.refreshInterval = setInterval(() => {
+                                this.refreshData();
+                            }, 30000); // Refresh every 30 seconds
+                        } else {
+                            if (this.refreshInterval) {
+                                clearInterval(this.refreshInterval);
+                            }
+                        }
+                    },
+                    refreshData: function() {
+                        this.loadHealth();
+                        this.loadMetrics();
+                        this.loadTracing();
+                    },
+                    openGrafana: function() {
+                        window.open('http://localhost:3000', '_blank');
+                    },
+                    openPrometheus: function() {
+                        window.open('http://localhost:9090', '_blank');
+                    },
+                    openJaeger: function() {
+                        window.open('http://localhost:16686', '_blank');
+                    }
+                },
+                mounted: function() {
+                    console.log('Vue app mounted successfully');
+                    this.refreshData();
+                }
+                });
+                
+                console.log('Vue app initialized successfully:', app);
+            } catch (error) {
+                console.error('Error initializing Vue app:', error);
+            }
+        }
+        
+        // Try multiple initialization approaches
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            // DOM is already loaded
+            initializeApp();
+        }
+        
+        // Also try after a short delay to ensure all scripts are loaded
+        setTimeout(initializeApp, 100);
+    </script>
+}
+
+<div id="observability-dashboard">
+    <div class="top">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">@Localizer.Menu["System"]</li>
+                <li class="breadcrumb-item active" aria-current="page">@Localizer.General["Observability"]</li>
+            </ol>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="top-nav">
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-secondary" :class="{ 'active': activeTab === 'metrics' }" v-on:click="setActiveTab('metrics')">
+                        <i class="fas fa-chart-line"></i> Metrics
+                    </button>
+                    <button class="btn btn-outline-secondary" :class="{ 'active': activeTab === 'tracing' }" v-on:click="setActiveTab('tracing')">
+                        <i class="fas fa-project-diagram"></i> Tracing
+                    </button>
+                    <button class="btn btn-outline-secondary" :class="{ 'active': activeTab === 'health' }" v-on:click="setActiveTab('health')">
+                        <i class="fas fa-heart"></i> Health
+                    </button>
+                    <button class="btn btn-outline-secondary" :class="{ 'active': activeTab === 'dashboards' }" v-on:click="setActiveTab('dashboards')">
+                        <i class="fas fa-tachometer-alt"></i> Dashboards
+                    </button>
+                </div>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-primary" :class="{ 'active': autoRefresh }" v-on:click="toggleAutoRefresh">
+                        <i class="fas fa-sync" :class="{ 'fa-spin': autoRefresh }"></i> Auto Refresh
+                    </button>
+                    <button class="btn btn-primary btn-labeled" v-on:click="refreshData" :disabled="loading">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid app">
+        <!-- Metrics Tab -->
+        <div v-if="activeTab === 'metrics'" class="row">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar"></i> Available Metrics
+                        </h5>
+                    </div>
+                    <div class="card-body" v-if="metrics">
+                        <p><strong>Metrics Endpoint:</strong> <code>{{metrics.metricsEndpoint}}</code></p>
+                        <p><strong>Last Updated:</strong> {{new Date(metrics.timestamp).toLocaleString()}}</p>
+                        <h6>Available Metrics:</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item" v-for="metric in metrics.availableMetrics" :key="metric">
+                                <code>{{metric}}</code>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body" v-else>
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-external-link-alt"></i> External Tools
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success btn-lg" v-on:click="openGrafana">
+                                <i class="fas fa-chart-line"></i> Open Grafana Dashboard
+                            </button>
+                            <button class="btn btn-warning btn-lg" v-on:click="openPrometheus">
+                                <i class="fas fa-fire"></i> Open Prometheus
+                            </button>
+                            <button class="btn btn-info btn-lg" v-on:click="openJaeger">
+                                <i class="fas fa-project-diagram"></i> Open Jaeger UI
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracing Tab -->
+        <div v-if="activeTab === 'tracing'" class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-project-diagram"></i> Distributed Tracing
+                        </h5>
+                    </div>
+                    <div class="card-body" v-if="tracing">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Activity Source:</strong> <code>{{tracing.activitySource}}</code></p>
+                                <p><strong>Current Trace ID:</strong> <code>{{tracing.currentTraceId || 'None'}}</code></p>
+                                <p><strong>Current Span ID:</strong> <code>{{tracing.currentSpanId || 'None'}}</code></p>
+                                <p><strong>Sampling Rate:</strong> {{(tracing.samplingRate * 100)}}%</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Available Services:</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item" v-for="service in tracing.availableServices" :key="service">
+                                        <code>{{service}}</code>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-vial"></i> Test Tracing
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Create a test trace to verify tracing is working correctly.</p>
+                        <button class="btn btn-primary" v-on:click="createTestTrace" :disabled="loading">
+                            <span v-if="loading" class="spinner-border spinner-border-sm" role="status"></span>
+                            <i v-else class="fas fa-play"></i>
+                            Create Test Trace
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Tab -->
+        <div v-if="activeTab === 'health'" class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-heart"></i> System Health
+                        </h5>
+                    </div>
+                    <div class="card-body" v-if="health">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Overall Status</h6>
+                                <div class="alert" :class="health.status === 'Healthy' ? 'alert-success' : 'alert-danger'">
+                                    <i class="fas" :class="health.status === 'Healthy' ? 'fa-check-circle' : 'fa-exclamation-triangle'"></i>
+                                    {{health.status}}
+                                </div>
+                                <p><strong>Last Check:</strong> {{new Date(health.timestamp).toLocaleString()}}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Services Status</h6>
+                                <ul class="list-group">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center" v-for="(status, service) in health.services" :key="service">
+                                        {{service}}
+                                        <span class="badge" :class="status === 'Connected' ? 'badge-success' : 'badge-danger'">{{status}}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <h6>System Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Machine:</strong> {{health.systemInfo.machineName}}</p>
+                                    <p><strong>Processors:</strong> {{health.systemInfo.processorCount}}</p>
+                                    <p><strong>OS:</strong> {{health.systemInfo.osVersion}}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Working Set:</strong> {{(health.systemInfo.workingSet / 1024 / 1024).toFixed(2)}} MB</p>
+                                    <p><strong>Uptime:</strong> {{Math.floor(health.systemInfo.tickCount / 1000 / 60 / 60)}} hours</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboards Tab -->
+        <div v-if="activeTab === 'dashboards'" class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tachometer-alt"></i> Embedded Dashboards
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                                        <h5>Grafana Dashboard</h5>
+                                        <p>Complete observability dashboard with metrics visualization.</p>
+                                        <button class="btn btn-success" v-on:click="openGrafana">
+                                            <i class="fas fa-external-link-alt"></i> Open Dashboard
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-fire fa-3x text-warning mb-3"></i>
+                                        <h5>Prometheus Metrics</h5>
+                                        <p>Raw metrics data and query interface.</p>
+                                        <button class="btn btn-warning" v-on:click="openPrometheus">
+                                            <i class="fas fa-external-link-alt"></i> Open Prometheus
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-project-diagram fa-3x text-info mb-3"></i>
+                                        <h5>Jaeger Tracing</h5>
+                                        <p>Distributed tracing and service dependency analysis.</p>
+                                        <button class="btn btn-info" v-on:click="openJaeger">
+                                            <i class="fas fa-external-link-alt"></i> Open Jaeger
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h6>Grafana Dashboard Access</h6>
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle"></i> Dashboard Access</h6>
+                                <p>Due to security restrictions, the Grafana dashboard cannot be embedded directly. Please use the buttons below to access the dashboards in new tabs.</p>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <a href="http://localhost:3000/d/piranha-workflow/piranha-cms-workflow-observability-dashboard?orgId=1&refresh=5s" 
+                                           target="_blank" class="btn btn-success btn-block">
+                                            <i class="fas fa-chart-line"></i> Workflow Dashboard
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a href="http://localhost:3000/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22prometheus%22,%7B%7D%5D" 
+                                           target="_blank" class="btn btn-warning btn-block">
+                                            <i class="fas fa-search"></i> Explore Metrics
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a href="http://localhost:3000/dashboards" 
+                                           target="_blank" class="btn btn-info btn-block">
+                                            <i class="fas fa-tachometer-alt"></i> All Dashboards
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <strong>Login credentials:</strong> admin / admin123
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

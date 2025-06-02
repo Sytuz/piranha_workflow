@@ -6,6 +6,7 @@ using Piranha.Manager.Services;
 using Piranha.Security;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -24,6 +25,7 @@ namespace Piranha.Manager.Controllers
         private readonly ManagerLocalizer _localizer;
         private readonly IUserResolutionService _userResolutionService;
         private readonly IContentTypeResolutionService _contentTypeResolutionService;
+        private readonly ITelemetryService _telemetryService;
 
         /// <summary>
         /// Default constructor.
@@ -32,14 +34,17 @@ namespace Piranha.Manager.Controllers
         /// <param name="localizer">The manager localizer</param>
         /// <param name="userResolutionService">The user resolution service</param>
         /// <param name="contentTypeResolutionService">The content type resolution service</param>
+        /// <param name="telemetryService">The telemetry service</param>
         public WorkflowDashboardApiController(IApi api, ManagerLocalizer localizer, 
             IUserResolutionService userResolutionService, 
-            IContentTypeResolutionService contentTypeResolutionService)
+            IContentTypeResolutionService contentTypeResolutionService,
+            ITelemetryService telemetryService)
         {
             _api = api;
             _localizer = localizer;
             _userResolutionService = userResolutionService;
             _contentTypeResolutionService = contentTypeResolutionService;
+            _telemetryService = telemetryService;
         }
 
         /// <summary>
@@ -50,13 +55,18 @@ namespace Piranha.Manager.Controllers
         [HttpGet]
         public async Task<IActionResult> GetOverview()
         {
+            var stopwatch = Stopwatch.StartNew();
+            using var activity = _telemetryService.GetActivitySource().StartActivity("GetWorkflowOverview");
+            
             try
             {
+                _telemetryService.IncrementWorkflowOperationCounter("get_overview");
+                
                 // Get all workflows and change requests
                 var workflows = await _api.Workflows.GetAllAsync();
                 var changeRequests = await _api.ChangeRequests.GetAllAsync();
                 
-                // Calculate real metrics from change requests
+                // Update workflow metrics
                 var totalContentInWorkflow = changeRequests.Count();
                 var pendingApproval = changeRequests.Count(cr => 
                     cr.Status == Piranha.Models.ChangeRequestStatus.Submitted || 
@@ -65,6 +75,14 @@ namespace Piranha.Manager.Controllers
                     cr.Status == Piranha.Models.ChangeRequestStatus.Approved && 
                     cr.LastModified >= DateTime.Now.AddDays(-7));
                 var rejected = changeRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Rejected);
+
+                // Record telemetry metrics
+                _telemetryService.RecordActiveWorkflowItems(totalContentInWorkflow);
+                _telemetryService.RecordPendingWorkflowItems(pendingApproval);
+
+                activity?.SetTag("total_workflows", workflows.Count());
+                activity?.SetTag("total_content", totalContentInWorkflow);
+                activity?.SetTag("pending_approval", pendingApproval);
 
                 // Calculate stage distribution from actual change requests
                 var stageDistribution = new List<WorkflowStageCount>();
@@ -127,10 +145,18 @@ namespace Piranha.Manager.Controllers
                     RecentActivity = recentActivity
                 };
 
+                stopwatch.Stop();
+                _telemetryService.RecordWorkflowOperation("get_overview", "success", stopwatch.Elapsed);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+
                 return Ok(overview);
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                _telemetryService.RecordWorkflowOperation("get_overview", "error", stopwatch.Elapsed);
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                
                 return StatusCode(500, new { message = "Unable to load change requests", error = ex.Message });
             }
         }
