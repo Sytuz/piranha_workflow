@@ -64,7 +64,7 @@ piranha.workflowedit = new Vue({
                 };
                 });
                 
-                //console.log("Final processed stages:", this.stages);
+                console.log("Final processed stages:", this.stages);
                 
                 // Convert relations from API format to UI format
                 this.relations = (result.relations || []).map(function(relation) {
@@ -510,36 +510,39 @@ piranha.workflowedit = new Vue({
                 return;
             }
 
-            // New validation: If a stage S points to 'Draft', then 'Draft' must be able to reach S.
-            var draftStage = self.stages
-                .find(function(s) { return s.title.trim().toLowerCase() === "draft"; });
-
-            if (draftStage) {
+            // New validation: No isolated stages (unless it's the only stage)
+            if (self.stages.length > 1) {
                 for (var i = 0; i < self.stages.length; i++) {
                     var currentStage = self.stages[i];
-
-                    // Skip if currentStage is itself the Draft stage
-                    if (currentStage.id === draftStage.id) {
-                        continue;
-                    }
-
-                    // Check if currentStage points to Draft stage
-                    var pointsToDraft = self.relations.some(function(rel) {
-                        return rel.sourceStageId === currentStage.id && rel.targetStageId === draftStage.id;
+                    var isConnected = self.relations.some(function(rel) {
+                        return rel.sourceStageId === currentStage.id || rel.targetStageId === currentStage.id;
                     });
+                    if (!isConnected) {
+                        piranha.notifications.push({
+                            body: "Stage '" + currentStage.title + "' is isolated. All stages must be connected to the workflow.",
+                            type: "danger",
+                            hide: true
+                        });
+                        return; // Stop save
+                    }
+                }
+            }
 
-                    if (pointsToDraft) {
-                        // Condition: Draft stage must be able to reach currentStage
-                        var draftCanReachCurrentStage = self.isReachable(draftStage.id, currentStage.id, self.relations);
-
-                        if (!draftCanReachCurrentStage) {
-                            piranha.notifications.push({
-                                body: "Stage '" + currentStage.title + "' points to 'Draft'. For the workflow to be valid, 'Draft' must have a path (direct or indirect) back to '" + currentStage.title + "'.",
-                                type: "danger",
-                                hide: true
-                            });
-                            return; // Stop save
-                        }
+            // New validation: All stages must be reachable from Draft (if Draft exists)
+            var draftStage = self.stages.find(function(s) { return s.title.trim().toLowerCase() === "draft"; });
+            if (draftStage) {
+                for (var i = 0; i < self.stages.length; i++) {
+                    var targetStage = self.stages[i];
+                    if (targetStage.id === draftStage.id) {
+                        continue; // Skip Draft itself
+                    }
+                    if (!self.isReachable(draftStage.id, targetStage.id, self.relations)) {
+                        piranha.notifications.push({
+                            body: "Stage '" + targetStage.title + "' is not reachable from 'Draft'. All stages must be reachable from the 'Draft' stage.",
+                            type: "danger",
+                            hide: true
+                        });
+                        return; // Stop save
                     }
                 }
             }
