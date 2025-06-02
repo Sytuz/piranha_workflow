@@ -15,6 +15,7 @@ piranha.workflowedit = new Vue({
         id: null,
         title: "",
         description: "",
+        isDefault: false, // Indicates if this is the default workflow
         stages: [], // Stages will have { id, title, description }
         availableRoles: [],
         relations: [], // Stage relations: { sourceStageId, targetStageId }
@@ -28,28 +29,29 @@ piranha.workflowedit = new Vue({
             },
             methods: {
             bind: function (result) {
-                console.log("Bind function called with result:", result);
+                //console.log("Bind function called with result:", result);
                 
                 this.id = result.id;
                 this.title = result.title;
                 this.originalTitle = result.title;
                 this.description = result.description;
+                this.isDefault = result.isDefault || false;
                 
-                console.log("Processing stages from API:", result.stages);
+                //console.log("Processing stages from API:", result.stages);
                 
                 // Convert stages and roles from API format to UI format
                 this.stages = (result.stages || []).map(function(stage) {
-                console.log("Processing stage:", stage);
-                console.log("Stage roles:", stage.roles);
+                //console.log("Processing stage:", stage);
+                //console.log("Stage roles:", stage.roles);
                 
                 const roleIds = (stage.roles || []).map(function(role) {
-                    console.log("Processing role:", role);
+                    //console.log("Processing role:", role);
                     const roleId = role.roleId || role.RoleId;
-                    console.log("Extracted roleId:", roleId);
+                    //console.log("Extracted roleId:", roleId);
                     return String(roleId).toUpperCase();
                 }) || [];
                 
-                console.log("Final roleIds for stage", stage.id, ":", roleIds);
+                //console.log("Final roleIds for stage", stage.id, ":", roleIds);
                 
                 return {
                     id: stage.id,
@@ -62,7 +64,7 @@ piranha.workflowedit = new Vue({
                 };
                 });
                 
-                console.log("Final processed stages:", this.stages);
+                //console.log("Final processed stages:", this.stages);
                 
                 // Convert relations from API format to UI format
                 this.relations = (result.relations || []).map(function(relation) {
@@ -72,7 +74,7 @@ piranha.workflowedit = new Vue({
                 };
                 });
                 
-                console.log("Final processed relations:", this.relations);
+                //console.log("Final processed relations:", this.relations);
                 
                 this.loading = false;
                 
@@ -85,40 +87,40 @@ piranha.workflowedit = new Vue({
         // Reliable diagram initialization with exponential backoff
         attemptDiagramInitialization: function() {
             if (this.diagramInitialized && this.goJsDiagram) {
-                console.log("GoJS: Diagram already initialized successfully");
+                //console.log("GoJS: Diagram already initialized successfully");
                 this.updateGoJsModel();
                 return;
             }
 
             if (this.initAttempts >= this.maxInitAttempts) {
-                console.warn("GoJS: Max initialization attempts reached. Please check for errors.");
+                //console.warn("GoJS: Max initialization attempts reached. Please check for errors.");
                 return;
             }
 
-            console.log(`GoJS: Initialization attempt ${this.initAttempts + 1} of ${this.maxInitAttempts}`);
+            //console.log(`GoJS: Initialization attempt ${this.initAttempts + 1} of ${this.maxInitAttempts}`);
             this.initAttempts++;
 
             // Try to initialize the diagram
             const success = this.initGoJsDiagram();
             
             if (success && this.diagramInitialized && this.goJsDiagram) {
-                console.log("GoJS: Initialization successful");
+                //console.log("GoJS: Initialization successful");
                 this.updateGoJsModel();
             } else {
                 // Retry with exponential backoff
                 const delay = Math.min(1000 * Math.pow(1.5, this.initAttempts), 5000);
-                console.log(`GoJS: Scheduling retry in ${delay}ms`);
+                //console.log(`GoJS: Scheduling retry in ${delay}ms`);
                 setTimeout(() => this.attemptDiagramInitialization(), delay);
             }
         },
         
         // Initializes the GoJS diagram 
         initGoJsDiagram: function() {
-            console.log("Initializing GoJS diagram...");
+            //console.log("Initializing GoJS diagram...");
             
             // First check if GoJS is available globally
             if (typeof go === 'undefined') {
-                console.error("GoJS library is not loaded. Will try again later.");
+                //console.error("GoJS library is not loaded. Will try again later.");
                 return false;
             }
             
@@ -128,21 +130,21 @@ piranha.workflowedit = new Vue({
             // Try multiple methods to get the diagram div, in order of reliability
             if (this.$refs && this.$refs.workflowDiagramDiv) {
                 diagramDiv = this.$refs.workflowDiagramDiv;
-                console.log("GoJS: Found diagram div via Vue $refs");
+                //console.log("GoJS: Found diagram div via Vue $refs");
             } else {
                 diagramDiv = document.getElementById('workflowDiagramDiv');
                 if (diagramDiv) {
-                    console.log("GoJS: Found diagram div via getElementById");
+                    //console.log("GoJS: Found diagram div via getElementById");
                 } else {
                     // Wait longer for Vue to finish rendering
-                    console.error("GoJS: Diagram div element not found in DOM");
+                    //console.error("GoJS: Diagram div element not found in DOM");
                     return false;
                 }
             }
 
             // Cleanup any existing diagram
             if (this.goJsDiagram) {
-                console.log("GoJS: Cleaning up old diagram instance");
+                //console.log("GoJS: Cleaning up old diagram instance");
                 try {
                     // Make sure we're really cleaning up
                     if (this.goJsDiagram.div) {
@@ -150,7 +152,7 @@ piranha.workflowedit = new Vue({
                     }
                     this.goJsDiagram = null;
                 } catch (e) {
-                    console.error("GoJS: Error cleaning up old diagram:", e);
+                    //console.error("GoJS: Error cleaning up old diagram:", e);
                 }
             }
 
@@ -166,11 +168,11 @@ piranha.workflowedit = new Vue({
                 // Force a reflow to ensure CSS is applied
                 void diagramDiv.offsetHeight;
             } else {
-                console.error("GoJS: No diagram div available after checks. Diagram initialization will fail.");
+                //console.error("GoJS: No diagram div available after checks. Diagram initialization will fail.");
                 return false;
             }
 
-            console.log("GoJS: Creating new diagram instance. Div height:", diagramDiv.offsetHeight);
+            //console.log("GoJS: Creating new diagram instance. Div height:", diagramDiv.offsetHeight);
             const $go = go.GraphObject.make;
 
             try {
@@ -269,7 +271,7 @@ piranha.workflowedit = new Vue({
                     );
                     
                 this.diagramInitialized = true;
-                console.log("GoJS: Diagram initialization complete");
+                //console.log("GoJS: Diagram initialization complete");
                 return true;
             } catch (e) {
                 console.error("GoJS: Error during diagram initialization:", e);
@@ -279,24 +281,24 @@ piranha.workflowedit = new Vue({
         
         // Updates the GoJS model with current stages and relations
         updateGoJsModel: function() {
-            console.log("Updating GoJS model...");
+            //console.log("Updating GoJS model...");
             
             // Make sure GoJS library is loaded
             if (typeof go === 'undefined') {
-                console.error("GoJS: Library not loaded. Cannot update model.");
+                //console.error("GoJS: Library not loaded. Cannot update model.");
                 return false;
             }
             
             // Try to initialize if not already done
             if (!this.goJsDiagram || !this.diagramInitialized) {
-                console.log("GoJS: Diagram not initialized yet, attempting initialization");
+                //console.log("GoJS: Diagram not initialized yet, attempting initialization");
                 
                 // Reset initialization attempts to make sure we try again with a fresh counter
                 this.initAttempts = 0;
                 
                 // Try to initialize diagram
                 if (!this.initGoJsDiagram()) {
-                    console.error("GoJS updateGoJsModel: Diagram initialization failed. Will retry later.");
+                    //console.error("GoJS updateGoJsModel: Diagram initialization failed. Will retry later.");
                     // Schedule another initialization attempt
                     setTimeout(() => this.attemptDiagramInitialization(), 500);
                     return false;
@@ -305,28 +307,28 @@ piranha.workflowedit = new Vue({
 
             // Double-check that diagram is available
             if (!this.goJsDiagram) {
-                console.error("GoJS updateGoJsModel: Diagram instance is not available. initGoJsDiagram might have failed or was not called when the div was ready.");
+                //console.error("GoJS updateGoJsModel: Diagram instance is not available. initGoJsDiagram might have failed or was not called when the div was ready.");
                 return false;
             }
 
             // Handle empty stages case
             if (!this.stages || this.stages.length === 0) {
-                console.log("GoJS: No stages to display, clearing diagram");
+                //console.log("GoJS: No stages to display, clearing diagram");
                 try {
                     // Create empty model
                     const emptyModel = new go.GraphLinksModel([], []);
                     this.goJsDiagram.model = emptyModel;
                     this.goJsDiagram.requestUpdate();
                 } catch (e) {
-                    console.error("GoJS: Error clearing diagram:", e);
+                    //console.error("GoJS: Error clearing diagram:", e);
                 }
                 return true;
             }
 
             try {
                 // Debug log about diagram
-                console.log("GoJS: Diagram div element:", this.goJsDiagram.div);
-                console.log("GoJS: Building node data array with", this.stages.length, "stages");
+                //console.log("GoJS: Diagram div element:", this.goJsDiagram.div);
+                //console.log("GoJS: Building node data array with", this.stages.length, "stages");
                 
                 // Create node data array
                 const nodeDataArray = [];
@@ -340,11 +342,11 @@ piranha.workflowedit = new Vue({
                             color: stage.color || "#cccccc"
                         });
                     } else {
-                        console.warn("GoJS: Skipping invalid stage:", stage);
+                        //console.warn("GoJS: Skipping invalid stage:", stage);
                     }
                 });
 
-                console.log("GoJS: Building link data array with", this.relations.length, "relations");
+                //console.log("GoJS: Building link data array with", this.relations.length, "relations");
                 const linkDataArray = [];
                 
                 // Use forEach instead of map for better error handling
@@ -355,11 +357,11 @@ piranha.workflowedit = new Vue({
                             to: rel.targetStageId
                         });
                     } else {
-                        console.warn("GoJS: Skipping invalid relation:", rel);
+                        //console.warn("GoJS: Skipping invalid relation:", rel);
                     }
                 });
 
-                console.log("GoJS: Setting model with", nodeDataArray.length, "nodes and", linkDataArray.length, "links");
+                //console.log("GoJS: Setting model with", nodeDataArray.length, "nodes and", linkDataArray.length, "links");
                 
                 // Create new model
                 const newModel = new go.GraphLinksModel();
@@ -495,6 +497,52 @@ piranha.workflowedit = new Vue({
                     return;
                 }
             }
+
+            // Check for duplicate stage titles
+            var stageTitles = self.stages.map(function(stage) { return stage.title.trim().toLowerCase(); });
+            var uniqueStageTitles = new Set(stageTitles);
+            if (stageTitles.length !== uniqueStageTitles.size) {
+                piranha.notifications.push({
+                    body: "Stage titles must be unique. Please ensure no two stages have the same name.",
+                    type: "danger",
+                    hide: true
+                });
+                return;
+            }
+
+            // New validation: If a stage S points to 'Draft', then 'Draft' must be able to reach S.
+            var draftStage = self.stages
+                .find(function(s) { return s.title.trim().toLowerCase() === "draft"; });
+
+            if (draftStage) {
+                for (var i = 0; i < self.stages.length; i++) {
+                    var currentStage = self.stages[i];
+
+                    // Skip if currentStage is itself the Draft stage
+                    if (currentStage.id === draftStage.id) {
+                        continue;
+                    }
+
+                    // Check if currentStage points to Draft stage
+                    var pointsToDraft = self.relations.some(function(rel) {
+                        return rel.sourceStageId === currentStage.id && rel.targetStageId === draftStage.id;
+                    });
+
+                    if (pointsToDraft) {
+                        // Condition: Draft stage must be able to reach currentStage
+                        var draftCanReachCurrentStage = self.isReachable(draftStage.id, currentStage.id, self.relations);
+
+                        if (!draftCanReachCurrentStage) {
+                            piranha.notifications.push({
+                                body: "Stage '" + currentStage.title + "' points to 'Draft'. For the workflow to be valid, 'Draft' must have a path (direct or indirect) back to '" + currentStage.title + "'.",
+                                type: "danger",
+                                hide: true
+                            });
+                            return; // Stop save
+                        }
+                    }
+                }
+            }
             
             self.loading = true;
             
@@ -570,34 +618,78 @@ piranha.workflowedit = new Vue({
                 self.loading = false;
             });
         },
-        
-        addStage: function () {
-            // Only allow adding if last stage is not immutable or no stages exist
-            if (this.stages.length > 0 && this.stages[this.stages.length - 1].isImmutable) {
-                piranha.notifications.push({
-                    body: "You cannot add a stage after an immutable stage.",
-                    type: "danger",
-                    hide: true
-                });
-                return;
+
+        isReachable: function(startStageId, endStageId, relations) {
+            // BFS implementation to check if endStageId is reachable from startStageId
+            if (startStageId === endStageId) return true;
+
+            var queue = [startStageId];
+            var visited = new Set();
+            visited.add(startStageId);
+
+            while (queue.length > 0) {
+                var currentId = queue.shift();
+
+                var neighbors = relations
+                    .filter(function(rel) { return rel.sourceStageId === currentId; })
+                    .map(function(rel) { return rel.targetStageId; });
+
+                for (var i = 0; i < neighbors.length; i++) {
+                    var neighborId = neighbors[i];
+                    if (neighborId === endStageId) {
+                        return true;
+                    }
+                    if (!visited.has(neighborId)) {
+                        visited.add(neighborId);
+                        queue.push(neighborId);
+                    }
+                }
             }
-            this.stages.push({
-                id: piranha.utils.generateId(),
-                title: "", 
-                description: "",
-                sortOrder: this.stages.length + 1, 
-                color: "#cccccc",
-                roleIds: [],
-                isImmutable: false // New stages are not immutable
-            });
+            return false;
+        },
+
+        addStage: function () {
+            // Check if there's an immutable stage (assumed to be last)
+            const hasImmutableStage = this.stages.length > 0 && this.stages[this.stages.length - 1].isImmutable;
+            
+            if (hasImmutableStage) {
+                // Insert before the immutable stage (second to last position)
+                const insertIndex = this.stages.length - 1;
+                this.stages.splice(insertIndex, 0, {
+                    id: piranha.utils.generateId(),
+                    title: "", 
+                    description: "",
+                    sortOrder: insertIndex + 1, 
+                    color: "#cccccc",
+                    roleIds: [],
+                    isImmutable: false // New stages are not immutable
+                });
+                
+                // Update sort orders for stages after the inserted one
+                for (let i = insertIndex + 1; i < this.stages.length; i++) {
+                    this.stages[i].sortOrder = i + 1;
+                }
+            } else {
+                // Add to the end if no immutable stage exists
+                this.stages.push({
+                    id: piranha.utils.generateId(),
+                    title: "", 
+                    description: "",
+                    sortOrder: this.stages.length + 1, 
+                    color: "#cccccc",
+                    roleIds: [],
+                    isImmutable: false // New stages are not immutable
+                });
+            }
+            
             // Update diagram
             this.$nextTick(() => {
-                this.updateGoJsModel();
+            this.updateGoJsModel();
             });
         },
-        
+                
         removeStage: function (index) {
-            console.log(this.stages);
+            //console.log(this.stages);
             const stageToRemove = this.stages[index];
             if (stageToRemove.isImmutable) {
                 piranha.notifications.push({
@@ -665,12 +757,12 @@ piranha.workflowedit = new Vue({
             if (!stage.isImmutable) {
                 return false; // Not immutable, so roles are editable
             }
-            // Stage is immutable. Check if it's the "Draft" stage (assumed to be the first stage).
-            const isDraftStage = this.stages.length > 0 && this.stages[0].id === stage.id;
-            if (isDraftStage) {
-                return false; // It's the "Draft" stage, roles are editable even if stage is immutable.
+            // Stage is immutable. Check if it's the "Published" stage (assumed to be the last stage).
+            const isPublishedStage = this.stages.length > 0 && this.stages[this.stages.length - 1].id === stage.id;
+            if (isPublishedStage) {
+                return true; // It's the "Published" stage, roles are not editable even if stage is immutable.
             }
-            return true; // It's an immutable stage other than "Draft", so roles are not editable.
+            return false; // It's an immutable stage other than "Published", so roles are editable.
         },
         
         toggleStageRole: function(stage, roleId, event) {
@@ -727,12 +819,12 @@ piranha.workflowedit = new Vue({
             if (!stage.isImmutable) {
                 return false; // Not immutable, so relations are editable
             }
-            // Stage is immutable. Check if it's the "Draft" stage (assumed to be the first stage).
-            const isDraftStage = this.stages.length > 0 && this.stages[0].id === stage.id;
-            if (isDraftStage) {
-                return false; // It's the "Draft" stage, relations are editable even if stage is immutable.
+            // Stage is immutable. Check if it's the "Published" stage (assumed to be the last stage).
+            const isPublishedStage = this.stages.length > 0 && this.stages[this.stages.length - 1].id === stage.id;
+            if (isPublishedStage) {
+                return true; // It's the "Published" stage, roles are not editable even if stage is immutable.
             }
-            return true; // It's an immutable stage other than "Draft", so relations are not editable.
+            return false; // It's an immutable stage other than "Published", so roles are editable.
         },
         
         toggleStageRelation: function(sourceStageId, targetStageId, event) {
@@ -772,7 +864,7 @@ piranha.workflowedit = new Vue({
                 });
             }
             
-            console.log("Relation toggled, updating diagram");
+            //console.log("Relation toggled, updating diagram");
             
             // Update diagram to reflect relation changes
             this.$nextTick(() => {
@@ -807,17 +899,17 @@ piranha.workflowedit = new Vue({
         this.$nextTick(() => {
             // If we're not in loading state and goJsDiagram is not initialized
             if (!this.loading && !this.diagramInitialized && document.getElementById('workflowDiagramDiv')) {
-                console.log("Vue updated hook: Initializing diagram");
+                //console.log("Vue updated hook: Initializing diagram");
                 this.attemptDiagramInitialization();
             } else if (this.diagramInitialized && this.goJsDiagram) {
                 // If the diagram is already initialized, make sure model is up-to-date
-                console.log("Vue updated hook: Diagram initialized, updating model");
+                //console.log("Vue updated hook: Diagram initialized, updating model");
                 this.updateGoJsModel();
             }
         });
     },
     mounted: function() {
-        console.log("Vue component mounted");
+        //console.log("Vue component mounted");
         // Initialize diagram when component is mounted
         this.$nextTick(() => {
             // Reset initialization attempts counter

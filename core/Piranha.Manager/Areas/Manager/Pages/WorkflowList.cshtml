@@ -104,8 +104,8 @@
                                 <button v-if="!selectedWorkflow.isEnabled" v-on:click.prevent="toggleEnabled(selectedWorkflow)" class="btn btn-sm btn-success mr-2">
                                     <i class="fas fa-check-circle"></i> Enable
                                 </button>
-                                <!-- Delete button: Only show if the workflow is NOT currently enabled -->
-                                <a v-if="!selectedWorkflow.isEnabled" v-on:click.prevent="remove(selectedWorkflow.id)" class="btn btn-sm btn-danger text-white">
+                                <!-- Delete button: Only show if the workflow is NOT currently enabled or default -->
+                                <a v-if="!selectedWorkflow.isEnabled || !selectedWorkflow.isDefault" v-on:click.prevent="remove(selectedWorkflow.id)" class="btn btn-sm btn-danger text-white">
                                     <i class="fas fa-trash"></i> Delete
                                 </a>
                             </div>

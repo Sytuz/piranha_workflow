@@ -59,6 +59,6 @@ namespace Piranha.Services
         /// Initializes Draft stages for existing workflows with all available roles.
         /// This should be run once at project startup.
         /// </summary>
-        Task InitializeDraftStageRolesAsync();
+        Task InitializeDefaultWorkflowRolesAsync();
     }
 }

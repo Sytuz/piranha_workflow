@@ -95,6 +95,8 @@ namespace Piranha.Manager.Controllers
         /// </summary>
         /// <param name="model">The model</param>
         /// <returns>The new workflow</returns>
+        
+        /*
         [HttpPost]
         [Route("create-standard")]
         public async Task<IActionResult> CreateStandard([FromBody] StandardWorkflowModel model)
@@ -118,6 +120,7 @@ namespace Piranha.Manager.Controllers
                 return StatusCode(500, error);
             }
         }
+        */
 
         /// <summary>
         /// Toggles the enabled state of the workflow with the specified id.

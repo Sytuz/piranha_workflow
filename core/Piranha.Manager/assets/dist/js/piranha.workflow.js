@@ -347,7 +347,7 @@ piranha.workflow = new Vue({
                 description: self.newWorkflowDescription
             };
 
-            fetch(piranha.baseUrl + "manager/api/workflow/create-standard", {
+            fetch(piranha.baseUrl + "manager/api/workflow/save", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

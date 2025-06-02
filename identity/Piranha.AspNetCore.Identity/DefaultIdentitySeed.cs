@@ -66,8 +66,8 @@ public class DefaultIdentitySeed : IIdentitySeed
             {
                 await _userManager.AddToRoleAsync(user, "SysAdmin");
                 
-                // Update the existing workflow 'Draft' stage to include the SysAdmin role
-                _workflowService.InitializeDraftStageRolesAsync().GetAwaiter().GetResult();
+                // Update the default workflow roles
+                _workflowService.InitializeDefaultWorkflowRolesAsync().GetAwaiter().GetResult();
             }
         }
     }

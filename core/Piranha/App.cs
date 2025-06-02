@@ -385,8 +385,8 @@ public sealed class App
                         if (!workflows.Any())
                         {
                             api.Workflows.CreateStandardWorkflowAsync(
-                                "Standard Workflow", 
-                                "Default workflow with Draft, Review, and Approved stages").GetAwaiter().GetResult();
+                                "Default Workflow", 
+                                "Workflow with Draft, Review, Legal Review, Approved and Published stages").GetAwaiter().GetResult();
                         }
                     }
                     catch (Exception ex)

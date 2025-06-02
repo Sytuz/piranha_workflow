@@ -117,6 +117,47 @@ public abstract class Db<T> :
             }
         }
 
+        // Add the roles associated with the Default Workflow
+        // Author, Reviewer, Legal and Publisher
+        var roles = new[]
+        {
+            new { Name = "Author", NormalizedName = "AUTHOR" },
+            new { Name = "Reviewer", NormalizedName = "REVIEWER" },
+            new { Name = "Legal", NormalizedName = "LEGAL" },
+            new { Name = "Publisher", NormalizedName = "PUBLISHER" }
+        };
+
+        foreach (var roleData in roles)
+        {
+            var existingRole = Roles.FirstOrDefault(r => r.NormalizedName == roleData.NormalizedName);
+            if (existingRole == null)
+            {
+                existingRole = new Role
+                {
+                    Id = Guid.NewGuid(),
+                    Name = roleData.Name,
+                    NormalizedName = roleData.NormalizedName
+                };
+                Roles.Add(existingRole);
+            }
+
+            // Add role claims for each role
+            foreach (var permission in App.Permissions.GetPermissions())
+                {
+                var roleClaim = RoleClaims.FirstOrDefault(c =>
+                    c.RoleId == existingRole.Id && c.ClaimType == permission.Name && c.ClaimValue == permission.Name);
+                if (roleClaim == null)
+                {
+                    RoleClaims.Add(new IdentityRoleClaim<Guid>
+                    {
+                    RoleId = existingRole.Id,
+                    ClaimType = permission.Name,
+                    ClaimValue = permission.Name
+                    });
+                }
+            }
+        }
+
         SaveChanges();
     }
 }

@@ -102,18 +102,6 @@ public class WorkflowService : IWorkflowService
                     }
                 };
             }
-
-            var allCurrentWorkflows = await _repo.GetAllAsync().ConfigureAwait(false);
-            if (!allCurrentWorkflows.Any(w => w.Id != model.Id)) // This new one will be the only one
-            {
-                model.IsEnabled = true;
-                model.IsDefault = true;
-            }
-            else
-            {
-                model.IsEnabled = false;
-                model.IsDefault = false;
-            }
         }
         else // Existing workflow
         {
@@ -192,12 +180,10 @@ public class WorkflowService : IWorkflowService
             if (wf.Id == idToMakeEnabled)
             {
                 if (!wf.IsEnabled) { wf.IsEnabled = true; changed = true; }
-                if (!wf.IsDefault) { wf.IsDefault = true; changed = true; }
             }
             else
             {
                 if (wf.IsEnabled) { wf.IsEnabled = false; changed = true; }
-                if (wf.IsDefault) { wf.IsDefault = false; changed = true; }
             }
 
             if (changed)
@@ -206,7 +192,9 @@ public class WorkflowService : IWorkflowService
                 await _repo.SaveAsync(wf).ConfigureAwait(false);
             }
         }
-    }    /// <inheritdoc />
+    }
+
+    /// <inheritdoc />
     public async Task<Workflow> CreateStandardWorkflowAsync(string title, string description = null)
     {
         var workflow = new Workflow
@@ -258,8 +246,9 @@ public class WorkflowService : IWorkflowService
                 Title = "Review",
                 Description = "Content under review",
                 SortOrder = 2,
+                Color = "#F44336", // Red color for review
                 IsPublished = false,
-                IsImmutable = false // Explicitly set
+                IsImmutable = true // Explicitly set
             },
             new WorkflowStage
             {
@@ -268,8 +257,9 @@ public class WorkflowService : IWorkflowService
                 Title = "Legal Review",
                 Description = "Content under legal review",
                 SortOrder = 3,
+                Color = "#FF9800", // Orange color for legal review
                 IsPublished = false,
-                IsImmutable = false // Explicitly set
+                IsImmutable = true // Explicitly set
             },
             new WorkflowStage
             {
@@ -279,7 +269,8 @@ public class WorkflowService : IWorkflowService
                 Description = "Content ready for publishing",
                 SortOrder = 4,
                 IsPublished = false,
-                IsImmutable = false // Explicitly set
+                Color = "#87CEEB", // Light blue color for approved stage
+                IsImmutable = true // Explicitly set
             },
             new WorkflowStage
             {
@@ -348,26 +339,120 @@ public class WorkflowService : IWorkflowService
     /// Initializes Draft stages for existing workflows with all available roles.
     /// This should be run once at project startup.
     /// </summary>
-    public async Task InitializeDraftStageRolesAsync()
+    public async Task InitializeDefaultWorkflowRolesAsync()
     {
         var allWorkflows = await _repo.GetAllAsync().ConfigureAwait(false);
         var allRoles = await App.Roles.GetAllAsync();
-                
+
         foreach (var workflow in allWorkflows)
         {
+            // Assign all available roles to the Draft stage
             var draftStage = workflow.Stages?.FirstOrDefault(s => s.Title == "Draft");
             if (draftStage != null && (draftStage.Roles == null || !draftStage.Roles.Any()))
-            {                
+            {
                 draftStage.Roles = allRoles.Select(role => new WorkflowStageRole
                 {
                     Id = Guid.NewGuid(),
                     WorkflowStageId = draftStage.Id,
                     RoleId = role.Id
                 }).ToList();
-                
-                workflow.LastModified = DateTime.Now;
-                await _repo.SaveAsync(workflow).ConfigureAwait(false);
             }
+
+            // Assign 'Reviewer' and 'SysAdmin' roles to the Review stage if it exists
+            var reviewStage = workflow.Stages?.FirstOrDefault(s => s.Title == "Review");
+            if (reviewStage != null && (reviewStage.Roles == null || !reviewStage.Roles.Any()))
+            {
+                var reviewerRole = allRoles.FirstOrDefault(r => r.Name == "Reviewer");
+                var sysAdminRole = allRoles.FirstOrDefault(r => r.Name == "SysAdmin");
+                var roles = new List<WorkflowStageRole>();
+                
+                if (reviewerRole != null)
+                {
+                    roles.Add(new WorkflowStageRole
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkflowStageId = reviewStage.Id,
+                        RoleId = reviewerRole.Id
+                    });
+                }
+                
+                if (sysAdminRole != null)
+                {
+                    roles.Add(new WorkflowStageRole
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkflowStageId = reviewStage.Id,
+                        RoleId = sysAdminRole.Id
+                    });
+                }
+                
+                reviewStage.Roles = roles;
+            }
+
+            // Assign 'Legal' and 'SysAdmin' roles to the Legal Review stage if it exists
+            var legalReviewStage = workflow.Stages?.FirstOrDefault(s => s.Title == "Legal Review");
+            if (legalReviewStage != null && (legalReviewStage.Roles == null || !legalReviewStage.Roles.Any()))
+            {
+                var legalRole = allRoles.FirstOrDefault(r => r.Name == "Legal");
+                var sysAdminRole = allRoles.FirstOrDefault(r => r.Name == "SysAdmin");
+                var roles = new List<WorkflowStageRole>();
+                
+                if (legalRole != null)
+                {
+                    roles.Add(new WorkflowStageRole
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkflowStageId = legalReviewStage.Id,
+                        RoleId = legalRole.Id
+                    });
+                }
+                
+                if (sysAdminRole != null)
+                {
+                    roles.Add(new WorkflowStageRole
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkflowStageId = legalReviewStage.Id,
+                        RoleId = sysAdminRole.Id
+                    });
+                }
+                
+                legalReviewStage.Roles = roles;
+            }
+
+            // Assign 'Publisher' and 'SysAdmin' roles to the Approved stage if it exists
+            var approvedStage = workflow.Stages?.FirstOrDefault(s => s.Title == "Approved");
+            if (approvedStage != null && (approvedStage.Roles == null || !approvedStage.Roles.Any()))
+            {
+                var publisherRole = allRoles.FirstOrDefault(r => r.Name == "Publisher");
+                var sysAdminRole = allRoles.FirstOrDefault(r => r.Name == "SysAdmin");
+                var roles = new List<WorkflowStageRole>();
+                
+                if (publisherRole != null)
+                {
+                    roles.Add(new WorkflowStageRole
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkflowStageId = approvedStage.Id,
+                        RoleId = publisherRole.Id
+                    });
+                }
+                
+                if (sysAdminRole != null)
+                {
+                    roles.Add(new WorkflowStageRole
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkflowStageId = approvedStage.Id,
+                        RoleId = sysAdminRole.Id
+                    });
+                }
+                
+                approvedStage.Roles = roles;
+            }
+
+            workflow.LastModified = DateTime.Now;
+            await _repo.SaveAsync(workflow).ConfigureAwait(false);
         }
     }
 }
