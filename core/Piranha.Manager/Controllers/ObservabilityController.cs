@@ -49,14 +49,14 @@ namespace Piranha.Manager.Controllers
 </head>
 <body>
     <div class=""header"">
-        <h1>🚀 Piranha CMS - Observability Dashboard</h1>
+        <h1>Piranha CMS - Observability Dashboard</h1>
         <p>Comprehensive monitoring and telemetry for editorial workflows</p>
     </div>
     <div class=""nav"">
-        <a href=""#"" onclick=""showMetrics()"">📊 Metrics (Prometheus)</a>
-        <a href=""#"" onclick=""showGrafana()"">📈 Grafana Dashboards</a>
-        <a href=""#"" onclick=""showTracing()"">🔍 Tracing (Jaeger)</a>
-        <a href=""#"" onclick=""showHealth()"">❤️ Health Status</a>
+        <a href=""#"" onclick=""showMetrics()"">Metrics (Prometheus)</a>
+        <a href=""#"" onclick=""showGrafana()"">Grafana Dashboards</a>
+        <a href=""#"" onclick=""showTracing()"">Tracing (Jaeger)</a>
+        <a href=""#"" onclick=""showHealth()"">Health Status</a>
     </div>
     <div class=""content"" id=""content"">
         <div class=""metrics-grid"">
@@ -71,7 +71,7 @@ namespace Piranha.Manager.Controllers
                 </ul>
             </div>
             <div class=""metric-card"">
-                <h3>📊 Available Metrics</h3>
+                <h3>Available Metrics</h3>
                 <ul>
                     <li>piranha_workflow_operations_total</li>
                     <li>piranha_workflow_operation_duration_seconds</li>
