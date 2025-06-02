@@ -10,6 +10,7 @@
 
 using Microsoft.AspNetCore.Identity;
 using Piranha.AspNetCore.Identity.Data;
+using Piranha.Services;
 
 namespace Piranha.AspNetCore.Identity;
 
@@ -29,14 +30,21 @@ public class DefaultIdentitySeed : IIdentitySeed
     private readonly UserManager<User> _userManager;
 
     /// <summary>
+    /// The Workflow service.
+    /// </summary>
+    private readonly IWorkflowService _workflowService;
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="db">The current DbContext</param>
     /// <param name="userManager">The current UserManager</param>
-    public DefaultIdentitySeed(IDb db, UserManager<User> userManager)
+    /// <param name="workflowService">The workflow service</param>
+    public DefaultIdentitySeed(IDb db, UserManager<User> userManager, IWorkflowService workflowService)
     {
         _db = db;
         _userManager = userManager;
+        _workflowService = workflowService;
     }
 
     /// <summary>
@@ -57,6 +65,9 @@ public class DefaultIdentitySeed : IIdentitySeed
             if (createResult.Succeeded)
             {
                 await _userManager.AddToRoleAsync(user, "SysAdmin");
+                
+                // Update the default workflow roles
+                _workflowService.InitializeDefaultWorkflowRolesAsync().GetAwaiter().GetResult();
             }
         }
     }

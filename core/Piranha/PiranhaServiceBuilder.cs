@@ -34,5 +34,8 @@ public class PiranhaServiceBuilder
     public PiranhaServiceBuilder(IServiceCollection services)
     {
         Services = services;
+
+        // Register WorkflowService
+        Services.AddScoped<Piranha.Services.IWorkflowService, Piranha.Services.WorkflowService>();
     }
 }

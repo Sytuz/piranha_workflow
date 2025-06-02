@@ -55,5 +55,32 @@ namespace Piranha.Data
         /// Gets or sets the roles that can access this stage.
         /// </summary>
         public ICollection<WorkflowStageRole> Roles { get; set; } = new List<WorkflowStageRole>();
+
+        /// <summary>
+        /// Gets or sets if this stage is immutable (cannot be edited or deleted).
+        /// </summary>
+        public bool IsImmutable { get; set; }
+
+        /// <summary>
+        /// Prevent editing of immutable stages.
+        /// </summary>
+        public void UpdateFrom(WorkflowStage source)
+        {
+            if (IsImmutable)
+            {
+                // Only allow updating non-editable fields (e.g. SortOrder, but not Title, Description, Color, Roles)
+                this.SortOrder = source.SortOrder;
+                this.IsPublished = source.IsPublished;
+            }
+            else
+            {
+                this.Title = source.Title;
+                this.Description = source.Description;
+                this.SortOrder = source.SortOrder;
+                this.Color = source.Color;
+                this.IsPublished = source.IsPublished;
+                this.Roles = source.Roles;
+            }
+        }
     }
 }

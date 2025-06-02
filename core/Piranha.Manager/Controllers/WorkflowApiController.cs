@@ -91,35 +91,6 @@ namespace Piranha.Manager.Controllers
         }
 
         /// <summary>
-        /// Creates a new workflow with standard stages.
-        /// </summary>
-        /// <param name="model">The model</param>
-        /// <returns>The new workflow</returns>
-        [HttpPost]
-        [Route("create-standard")]
-        public async Task<IActionResult> CreateStandard([FromBody] StandardWorkflowModel model)
-        {
-            try
-            {
-                var workflow = await _service.CreateStandardWorkflowAsync(model.Title, model.Description);
-                return Ok(workflow);
-            }
-            catch (ValidationException e)
-            {
-                var error = new ErrorMessage { Body = e.Message };
-                return BadRequest(error);
-            }
-            catch (Exception e)
-            {
-                var error = new ErrorMessage
-                {
-                    Body = e.Message
-                };
-                return StatusCode(500, error);
-            }
-        }
-
-        /// <summary>
         /// Toggles the enabled state of the workflow with the specified id.
         /// </summary>
         /// <param name="id">The workflow id</param>
@@ -159,8 +130,22 @@ namespace Piranha.Manager.Controllers
         [Route("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            await _service.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _service.DeleteAsync(id);
+                return NoContent();
+            }
+            catch (ValidationException e)
+            {
+                // Return a 400 Bad Request for validation errors
+                return BadRequest(new { message = e.Message });
+            }
+            catch (Exception e)
+            {
+                // Log the exception details (e.g., using a logging framework)
+                // For now, return a 500 error with the exception message
+                return StatusCode(500, new { message = e.Message, details = e.ToString() });
+            }
         }
 
         /// <summary>
