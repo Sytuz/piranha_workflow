@@ -52,14 +52,20 @@ namespace Piranha.Manager.Services
         public async Task<IEnumerable<ChangeRequest>> GetByCreatedByIdAsync(Guid userId)
         {
             return await _api.ChangeRequests.GetByCreatedByIdAsync(userId);
-        }
-
-        /// <summary>
+        }        /// <summary>
         /// Gets change requests by stage id.
         /// </summary>
         public async Task<IEnumerable<ChangeRequest>> GetByStageIdAsync(Guid stageId)
         {
             return await _api.ChangeRequests.GetByStageIdAsync(stageId);
+        }
+
+        /// <summary>
+        /// Gets change requests by content id.
+        /// </summary>
+        public async Task<IEnumerable<ChangeRequest>> GetByContentIdAsync(Guid contentId)
+        {
+            return await _api.ChangeRequests.GetByContentIdAsync(contentId);
         }
 
         /// <summary>

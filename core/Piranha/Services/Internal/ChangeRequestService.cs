@@ -59,12 +59,16 @@ namespace Piranha.Services
         public async Task<IEnumerable<ChangeRequest>> GetByCreatedByIdAsync(Guid userId)
         {
             return await _repo.GetByCreatedByIdAsync(userId).ConfigureAwait(false);
-        }
-
-        /// <inheritdoc />
+        }        /// <inheritdoc />
         public async Task<IEnumerable<ChangeRequest>> GetByStageIdAsync(Guid stageId)
         {
             return await _repo.GetByStageIdAsync(stageId).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<IEnumerable<ChangeRequest>> GetByContentIdAsync(Guid contentId)
+        {
+            return await _repo.GetByContentIdAsync(contentId).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

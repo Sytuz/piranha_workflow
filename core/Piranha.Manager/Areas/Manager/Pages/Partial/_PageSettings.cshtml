@@ -32,18 +32,17 @@
 
             <!-- Body -->
             <div class="modal-body bg-light">
-                <div :class="{ 'd-none': selectedSetting != 'uid-settings' }">
-                    <div class="form-group" v-if="usePrimaryImage">
+                <div :class="{ 'd-none': selectedSetting != 'uid-settings' }">                    <div class="form-group" v-if="usePrimaryImage">
                         <label>@Localizer.Content["Primary image"]</label>
-                        <div class="block image-block primary-image primary-image-modal" :class="{ readonly: isCopy}">
+                        <div class="block image-block primary-image primary-image-modal" :class="{ readonly: isCopy || isChangeRequestReadOnly}">
                             <div class="block-body has-media-picker rounded" :class="{ empty: primaryImage.id === null }">
                                 <img class="rounded" :src="primaryImageUrl">
                                 <div class="media-picker">
                                     <div class="btn-group float-right">
-                                        <button v-on:click.prevent="selectPrimaryImage" class="btn btn-primary text-center">
+                                        <button v-on:click.prevent="selectPrimaryImage" class="btn btn-primary text-center" :disabled="isCopy || isChangeRequestReadOnly">
                                             <i class="fas fa-plus"></i>
                                         </button>
-                                        <button v-on:click.prevent="removePrimaryImage" class="btn btn-danger text-center">
+                                        <button v-on:click.prevent="removePrimaryImage" class="btn btn-danger text-center" :disabled="isCopy || isChangeRequestReadOnly">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
@@ -59,22 +58,20 @@
                             </div>
                             <div class="content-blocker"></div>
                         </div>
-                    </div>
-                    <div class="form-group">
+                    </div>                    <div class="form-group">
                         <label>@Localizer.Page["Navigation title"]</label>
                         <div class="input-group">
-                            <input v-model="navigationTitle" type="text" maxlength="128" class="form-control">
+                            <input v-model="navigationTitle" type="text" maxlength="128" class="form-control" :readonly="isCopy || isChangeRequestReadOnly">
                             <div class="input-group-append">
                                 <div class="input-group-text text-muted">
                                     {{ piranha.utils.strLength(navigationTitle) + "/128" }}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
+                    </div>                    <div class="form-group">
                         <label>@Localizer.General["Slug"]</label>
                         <div class="input-group">
-                            <input v-model="slug" type="text" maxlength="128" class="form-control">
+                            <input v-model="slug" type="text" maxlength="128" class="form-control" :readonly="isCopy || isChangeRequestReadOnly">
                             <div class="input-group-append">
                                 <div class="input-group-text text-muted">
                                     {{ piranha.utils.strLength(slug) + "/128" }}
@@ -86,14 +83,13 @@
                         </span>
                     </div>
                     <div class="form-group">
-                        <label>@Localizer.General["Publish date"]</label>
-                        <div class="row">
+                        <label>@Localizer.General["Publish date"]</label>                        <div class="row">
                             <div class="col">
-                                <datepicker v-model="published" :format="'yyyy-MM-dd'" :monday-first="true" :typeable="true" :bootstrap-styling="true"></datepicker>
+                                <datepicker v-model="published" :format="'yyyy-MM-dd'" :monday-first="true" :typeable="true" :bootstrap-styling="true" :disabled="isCopy || isChangeRequestReadOnly"></datepicker>
                             </div>
                             <div class="col">
                                 <div class="input-group">
-                                    <input class="form-control" type="time" v-model="publishedTime">
+                                    <input class="form-control" type="time" v-model="publishedTime" :readonly="isCopy || isChangeRequestReadOnly">
                                     <div class="input-group-append">
                                         <span class="input-group-text"><i class="fas fa-clock"></i></span>
                                     </div>
@@ -102,16 +98,15 @@
                         </div>
                     </div>
                     <div class="form-group" v-if="useExcerpt">
-                        <label>@Localizer.Content["Excerpt"]</label>
-                        <div v-if="useHtmlExcerpt" class="block text-block ingress" :class="{ empty: isExcerptEmpty, readonly: isCopy }">
+                        <label>@Localizer.Content["Excerpt"]</label>                        <div v-if="useHtmlExcerpt" class="block text-block ingress" :class="{ empty: isExcerptEmpty, readonly: isCopy || isChangeRequestReadOnly }">
                             <div id="excerpt-toolbar" class="component-toolbar"></div>
                             <div id="excerpt-body" class="block-body html-block" contenteditable="true" v-html="excerpt" v-on:blur="onExcerptBlur">
                             </div>
                             <div class="content-blocker"></div>
                         </div>
-                        <div v-else class="position-relative" :class="{ readonly: isCopy }">
+                        <div v-else class="position-relative" :class="{ readonly: isCopy || isChangeRequestReadOnly }">
                             <div class="input-group below">
-                                <textarea v-model="excerpt" rows="5" maxlength="1000" class="form-control"></textarea>
+                                <textarea v-model="excerpt" rows="5" maxlength="1000" class="form-control" :readonly="isCopy || isChangeRequestReadOnly"></textarea>
                                 <div class="input-group-append">
                                     <div class="input-group-text text-muted">
                                         {{ piranha.utils.strLength(excerpt) + "/1000" }}
@@ -123,11 +118,10 @@
                     </div>
                 </div>
 
-                <div :class="{ 'd-none': selectedSetting != 'uid-seo' }">
-                    <div class="form-group">
+                <div :class="{ 'd-none': selectedSetting != 'uid-seo' }">                    <div class="form-group">
                         <label>@Localizer.Page["Meta title"]</label>
                         <div class="input-group">
-                            <input v-model="metaTitle" type="text" maxlength="128" class="form-control" :placeholder="title">
+                            <input v-model="metaTitle" type="text" maxlength="128" class="form-control" :placeholder="title" :readonly="isCopy || isChangeRequestReadOnly">
                             <div class="input-group-append">
                                 <div class="input-group-text text-muted">
                                     {{ piranha.utils.strLength(metaTitle) + "/128" }}
@@ -138,7 +132,7 @@
                     <div class="form-group">
                         <label>@Localizer.Page["Meta keywords"]</label>
                         <div class="input-group">
-                            <input v-model="metaKeywords" type="text" maxlength="128" class="form-control">
+                            <input v-model="metaKeywords" type="text" maxlength="128" class="form-control" :readonly="isCopy || isChangeRequestReadOnly">
                             <div class="input-group-append">
                                 <div class="input-group-text text-muted">
                                     {{ piranha.utils.strLength(metaKeywords) + "/128" }}
@@ -147,27 +141,25 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>@Localizer.Page["Meta description"]</label>
-                        <div class="input-group">
-                            <textarea v-model="metaDescription" rows="5" maxlength="255" class="form-control"></textarea>
+                        <label>@Localizer.Page["Meta description"]</label>                        <div class="input-group">
+                            <textarea v-model="metaDescription" rows="5" maxlength="255" class="form-control" :readonly="isCopy || isChangeRequestReadOnly"></textarea>
                             <div class="input-group-append">
                                 <div class="input-group-text text-muted">
                                     {{ piranha.utils.strLength(metaDescription) + "/255" }}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
+                    </div>                    <div class="form-group">
                         <label for="metaIndex">@Localizer.Content["Meta index"]</label>
                         <div class="form-switch">
-                            <button id="metaIndex" v-on:click.prevent="metaIndex = !metaIndex" class="switch" :aria-pressed="metaIndex"><span></span></button>
+                            <button id="metaIndex" v-on:click.prevent="metaIndex = !metaIndex" class="switch" :aria-pressed="metaIndex" :disabled="isCopy || isChangeRequestReadOnly"><span></span></button>
                             <label for="metaIndex" class="form-check-label">@Localizer.Page["If the page should be indexed by search engines."]</label>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="metaFollow">@Localizer.Content["Meta follow"]</label>
                         <div class="form-switch">
-                            <button id="metaFollow" v-on:click.prevent="metaFollow = !metaFollow" class="switch" :aria-pressed="metaFollow"><span></span></button>
+                            <button id="metaFollow" v-on:click.prevent="metaFollow = !metaFollow" class="switch" :aria-pressed="metaFollow" :disabled="isCopy || isChangeRequestReadOnly"><span></span></button>
                             <label for="metaFollow" class="form-check-label">@Localizer.Page["If links from this page should be indexed."]</label>
                         </div>
                     </div>
@@ -176,16 +168,15 @@
                             <label><strong>@Localizer.Content["Meta priority"]</strong></label>
                             <span class="ml-auto">{{ metaPriorityDescription }}</span>
                         </div>
-                        <input v-model="metaPriority" type="range"  class="custom-range" min="0" max="1" step="0.1">
+                        <input v-model="metaPriority" type="range"  class="custom-range" min="0" max="1" step="0.1" :disabled="isCopy || isChangeRequestReadOnly">
                         <small>@Localizer.Content["Search engine priority, compared to other content in the same site."]</small>
                     </div>
                 </div>
 
-                <div :class="{ 'd-none': selectedSetting != 'uid-sharing' }">
-                    <div class="form-group">
+                <div :class="{ 'd-none': selectedSetting != 'uid-sharing' }">                    <div class="form-group">
                         <label>@Localizer.Page["Og title"]</label>
                         <div class="input-group">
-                            <input v-model="ogTitle" type="text" maxlength="128" class="form-control" :placeholder="metaTitle !== null && metaTitle !== '' ? metaTitle : title">
+                            <input v-model="ogTitle" type="text" maxlength="128" class="form-control" :placeholder="metaTitle !== null && metaTitle !== '' ? metaTitle : title" :readonly="isCopy || isChangeRequestReadOnly">
                             <div class="input-group-append">
                                 <div class="input-group-text text-muted">
                                     {{ piranha.utils.strLength(ogTitle) + "/128" }}
@@ -200,7 +191,7 @@
                     <div class="form-group">
                         <label>@Localizer.Page["Og description"]</label>
                         <div class="input-group">
-                            <textarea v-model="ogDescription" rows="5" maxlength="255" class="form-control" :placeholder="metaDescription"></textarea>
+                            <textarea v-model="ogDescription" rows="5" maxlength="255" class="form-control" :placeholder="metaDescription" :readonly="isCopy || isChangeRequestReadOnly"></textarea>
                             <div class="input-group-append">
                                 <div class="input-group-text text-muted">
                                     {{ piranha.utils.strLength(ogDescription) + "/255" }}
@@ -210,24 +201,23 @@
                     </div>
                 </div>
 
-                <div :class="{ 'd-none': selectedSetting != 'uid-advanced' }">
-                    <div class="form-group">
+                <div :class="{ 'd-none': selectedSetting != 'uid-advanced' }">                    <div class="form-group">
                         <label for="isHidden">@Localizer.Page["Hidden"]</label>
                         <div class="form-switch">
-                            <button id="isHidden" v-on:click.prevent="isHidden = !isHidden" class="switch" :aria-pressed="isHidden"><span></span></button>
+                            <button id="isHidden" v-on:click.prevent="isHidden = !isHidden" class="switch" :aria-pressed="isHidden" :disabled="isCopy || isChangeRequestReadOnly"><span></span></button>
                             <label for="isHidden" class="form-check-label">@Localizer.Page["If the page should be hidden in the sitemap"]</label>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="enableComments">@Localizer.General["Comments"]</label>
                         <div class="form-switch">
-                            <button id="enableComments" v-on:click.prevent="enableComments = !enableComments" class="switch" :aria-pressed="enableComments"><span></span></button>
+                            <button id="enableComments" v-on:click.prevent="enableComments = !enableComments" class="switch" :aria-pressed="enableComments" :disabled="isCopy || isChangeRequestReadOnly"><span></span></button>
                             <label for="enableComments" class="form-check-label">@Localizer.Page["If comments should be enabled for this page"]</label>
                         </div>
                     </div>
                     <div class="form-group" :class="{ 'text-muted': !enableComments }">
                         <label>@Localizer.Comment["Days allowed for commenting"]</label>
-                        <input type="number" v-model.number="closeCommentsAfterDays" class="form-control" :disabled="!enableComments">
+                        <input type="number" v-model.number="closeCommentsAfterDays" class="form-control" :disabled="!enableComments || isCopy || isChangeRequestReadOnly">
                         <span v-if="enableComments === false" class="field-description small text-muted">
                             @Localizer.Comment["Comments are not allowed."]
                         </span>

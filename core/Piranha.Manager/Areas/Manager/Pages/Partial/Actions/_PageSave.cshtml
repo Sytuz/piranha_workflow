@@ -4,19 +4,19 @@
 @if ((await Auth.AuthorizeAsync(User, Permission.PagesSave)).Succeeded)
 {
     <div class="btn-group d-none d-lg-inline-flex" role="group">
-        <button v-on:click.prevent="saveDraft" :class="{ 'btn-loading' : savingDraft }" type="button" class="btn btn-primary btn-labeled">
+        <button v-on:click.prevent="saveDraft" :class="{ 'btn-loading' : savingDraft }" :disabled="isChangeRequestReadOnly" type="button" class="btn btn-primary btn-labeled">
             <i class="fas fa-save"></i>
             @Localizer.General["Save"]
         </button>
         <div v-if="state === 'draft'" class="btn-group" role="group">
-            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+            <button type="button" class="btn btn-primary dropdown-toggle" :disabled="isChangeRequestReadOnly" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="btnGroupDrop1">
                 <a v-if="state === 'draft'" v-on:click.prevent="revert" class="dropdown-item" href="#"><i class="fas fa-undo"></i> @Localizer.General["Revert"]</a>
             </div>
         </div>
     </div>
     <div v-if="state === 'draft'" class="dropdown d-inline-block d-lg-none">
-        <button :class="{ 'btn-loading' : savingDraft }" class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button :class="{ 'btn-loading' : savingDraft }" :disabled="isChangeRequestReadOnly" class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-save mr-1"></i>
         </button>
         <div class="dropdown-menu">
@@ -24,7 +24,7 @@
             <a v-on:click.prevent="revert" class="dropdown-item" href="#">@Localizer.General["Revert"]</a>
         </div>
     </div>
-    <button v-else v-on:click.prevent="saveDraft" class="btn btn-primary btn-icon d-inline-block d-lg-none" title="@Localizer.General["Save"]">
+    <button v-else v-on:click.prevent="saveDraft" :disabled="isChangeRequestReadOnly" class="btn btn-primary btn-icon d-inline-block d-lg-none" title="@Localizer.General["Save"]">
         <i class="fas fa-save"></i>
     </button>
 }

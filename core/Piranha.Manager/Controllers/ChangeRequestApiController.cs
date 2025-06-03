@@ -129,6 +129,28 @@ namespace Piranha.Manager.Controllers
                 {
                     Body = $"Error retrieving change requests for user: {ex.Message}"
                 });
+            }        }
+
+        /// <summary>
+        /// Gets change requests by content id.
+        /// </summary>
+        /// <param name="contentId">The content id</param>
+        /// <returns>The change requests</returns>
+        [HttpGet]
+        [Route("content/{contentId}")]
+        [Authorize(Policy = Permission.ChangeRequests)]
+        public async Task<IActionResult> GetByContentId(Guid contentId)
+        {
+            try
+            {
+                return Ok(await _service.GetByContentIdAsync(contentId));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error retrieving change requests for content: {ex.Message}"
+                });
             }
         }
 
