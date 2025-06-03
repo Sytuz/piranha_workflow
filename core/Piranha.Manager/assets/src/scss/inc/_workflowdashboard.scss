@@ -624,6 +624,17 @@
     .w-100 {
         width: 100% !important;
     }
+
+
+    .status-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        vertical-align: middle;
+        /* Ensure it has a default appearance if color is not set, though Vue binding has a fallback */
+        background-color: #cccccc; 
+    }
     
     // Responsive adjustments
     @media (max-width: 768px) {
