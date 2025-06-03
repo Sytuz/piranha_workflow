@@ -66,7 +66,15 @@ piranha.pageedit = new Vue({
         changeRequestTitle: "",
         changeRequestNotes: "",
         changeRequestTitleError: null,
-        submittingChangeRequest: false
+        submittingChangeRequest: false,
+        
+        // Workflow visualization properties
+        workflowData: null,
+        accessibleStages: [],
+        selectedTargetStage: "",
+        targetStageError: null,
+        workflowDiagram: null,
+        loadingWorkflow: false
     },
     computed: {
         contentRegions: function () {
@@ -464,23 +472,41 @@ piranha.pageedit = new Vue({
             } else {
                 this.excerpt = e.target.innerHTML;
             }
-        },
-        openChangeRequestModal: function () {
+        },        openChangeRequestModal: function () {
             // Reset form fields
             this.changeRequestTitle = "";
             this.changeRequestNotes = "";
             this.changeRequestTitleError = null;
+            this.targetStageError = null;
             this.submittingChangeRequest = false;
+            this.selectedTargetStage = "";
+            this.accessibleStages = [];
+            this.workflowData = null;
             
-            // Open modal
-            $("#changeRequestModal").modal("show");
-        },
-        submitChangeRequest: function () {
+            // Load workflow data before opening modal
+            this.loadWorkflowData().then(() => {
+                // Open modal after workflow data is loaded
+                $("#changeRequestModal").modal("show");
+                
+                // Initialize diagram after modal is shown and DOM is ready
+                this.$nextTick(() => {
+                    this.initChangeRequestDiagram();
+                });
+            });
+        },        submitChangeRequest: function () {
+            var self = this;
             // Validate form
             this.changeRequestTitleError = null;
+            this.targetStageError = null;
 
             if (!this.changeRequestTitle || this.changeRequestTitle.trim() === "") {
                 this.changeRequestTitleError = "Title is required";
+                return;
+            }
+
+            // Validate target stage selection
+            if (!this.selectedTargetStage) {
+                this.targetStageError = "Please select a target stage";
                 return;
             }
 
@@ -518,14 +544,13 @@ piranha.pageedit = new Vue({
             if (!contentSnapshot || contentSnapshot === "{}") {
                 this.changeRequestTitleError = "Content snapshot is required";
                 return;
-            }
-
-            var changeRequest = {
+            }            var changeRequest = {
                 ContentId: this.id,
                 Title: this.changeRequestTitle.trim(),
                 Notes: this.changeRequestNotes.trim(),
                 WorkflowId: workflowId,
                 CreatedById: createdById,
+                TargetStageId: this.selectedTargetStage,
                 ContentSnapshot: contentSnapshot
             };
 
@@ -561,7 +586,191 @@ piranha.pageedit = new Vue({
                     type: "danger"
                 });
             });
-        }
+        },
+        
+        // Workflow visualization methods
+        loadWorkflowData: function () {
+            var self = this;
+            self.loadingWorkflow = true;
+            
+            return fetch(piranha.baseUrl + "manager/api/workflow/enabled")
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error("Failed to load workflow data");
+                    }
+                    return response.json();
+                })
+                .then(function (workflowData) {
+                    self.workflowData = workflowData;
+                    self.loadingWorkflow = false;
+                    
+                    // Filter accessible stages from Draft stage
+                    if (workflowData && workflowData.stages && workflowData.relations) {
+                        self.filterAccessibleStages();
+                    }
+                })
+                .catch(function (error) {
+                    console.error("Error loading workflow data:", error);
+                    self.loadingWorkflow = false;
+                    self.workflowData = null;
+                });
+        },
+        
+        filterAccessibleStages: function () {
+            if (!this.workflowData || !this.workflowData.stages || !this.workflowData.relations) {
+                this.accessibleStages = [];
+                return;
+            }
+            
+            // Find the Draft stage
+            var draftStage = this.workflowData.stages.find(function(stage) {
+                return stage.title && stage.title.toLowerCase() === 'draft';
+            });
+            
+            if (!draftStage) {
+                // If no Draft stage found, show all stages
+                this.accessibleStages = this.workflowData.stages.slice();
+                return;
+            }
+            
+            // Find all stages accessible from Draft using relations
+            var accessibleStageIds = new Set();
+            var relations = this.workflowData.relations || [];
+            
+            // Add stages directly accessible from Draft
+            relations.forEach(function(relation) {
+                if (relation.sourceStageId === draftStage.id) {
+                    accessibleStageIds.add(relation.targetStageId);
+                }
+            });
+            
+            // Filter stages to only include accessible ones
+            this.accessibleStages = this.workflowData.stages.filter(function(stage) {
+                return accessibleStageIds.has(stage.id);
+            });
+        },
+        
+        initChangeRequestDiagram: function () {
+            if (!this.workflowData || !this.workflowData.stages || this.workflowData.stages.length === 0) {
+                return;
+            }
+            
+            // Check if GoJS is available
+            if (typeof go === 'undefined') {
+                console.error("GoJS library not found for change request diagram");
+                return;
+            }
+            
+            var diagramDiv = document.getElementById("changeRequestWorkflowDiagram");
+            if (!diagramDiv) {
+                console.error("Change request diagram container not found");
+                return;
+            }
+            
+            // Initialize GoJS diagram
+            this.workflowDiagram = go.GraphObject.make(go.Diagram, diagramDiv, {
+                layout: go.GraphObject.make(go.LayeredDigraphLayout, {
+                    direction: 0,
+                    layerSpacing: 50,
+                    columnSpacing: 30
+                }),
+                isReadOnly: true,
+                allowSelect: false,
+                allowCopy: false,
+                allowDelete: false,
+                allowMove: false,
+                hasHorizontalScrollbar: false,
+                hasVerticalScrollbar: false
+            });
+              // Define node template (exact same as workflow.js with color bar)
+            var $go = go.GraphObject.make;
+            this.workflowDiagram.nodeTemplate =
+                $go(go.Node, "Auto",
+                    $go(go.Panel, "Table",
+                        { defaultAlignment: go.Spot.Left, margin: 0 },
+                        // Left color bar with rounded top-left and bottom-left corners
+                        $go(go.Shape, "Rectangle",
+                            {
+                                row: 0, column: 0,
+                                width: 12,
+                                stretch: go.GraphObject.Vertical,
+                                fill: "#cccccc",
+                                stroke: null,
+                                minSize: new go.Size(12, 40),
+                                maxSize: new go.Size(12, NaN),
+                                margin: 0,
+                                parameter1: 0,
+                                geometryString: "F M12,0 Q0,0 0,8 V72 Q0,80 12,80 H12 V0 Z"
+                            },
+                            new go.Binding("fill", "color")
+                        ),
+                        // Main node shape and content: Rectangle with rounded top-right and bottom-right corners
+                        $go(go.Panel, "Auto",
+                            { row: 0, column: 1 },
+                            $go(go.Shape, "Rectangle",
+                                {
+                                    fill: "white",
+                                    stroke: "#BBB",
+                                    strokeWidth: 1,
+                                    minSize: new go.Size(120, 40),
+                                    parameter1: 0,
+                                    geometryString: "F M0,0 H108 Q120,0 120,8 V72 Q120,80 108,80 H0 Q0,80 0,72 V8 Q0,0 0,0 Z"
+                                }
+                            ),
+                            $go(go.Panel, "Vertical", { margin: 10, defaultAlignment: go.Spot.Left },
+                                $go(go.TextBlock,
+                                    { font: "bold 10pt sans-serif", stroke: "#333", margin: new go.Margin(0, 0, 4, 0) },
+                                    new go.Binding("text", "title")
+                                ),
+                                $go(go.TextBlock,
+                                    { font: "9pt sans-serif", stroke: "#555", wrap: go.TextBlock.WrapDesiredSize, width: 130 },
+                                    new go.Binding("text", "description", function(d) { 
+                                        return d && d.length > 50 ? d.substring(0, 47) + "..." : (d || ""); 
+                                    })
+                                )
+                            )
+                        )
+                    ),
+                    { locationSpot: go.Spot.Center }
+                );
+            
+            // Define link template
+            this.workflowDiagram.linkTemplate =
+                go.GraphObject.make(go.Link,
+                    { routing: go.Link.AvoidsNodes, corner: 10 },
+                    go.GraphObject.make(go.Shape, { strokeWidth: 2, stroke: "#555" }),
+                    go.GraphObject.make(go.Shape, { toArrow: "Standard", fill: "#555", stroke: null })
+                );
+            
+            this.updateChangeRequestDiagram();
+        },
+        
+        updateChangeRequestDiagram: function () {
+            if (!this.workflowDiagram || !this.workflowData) {
+                return;
+            }
+              // Build node data
+            var nodeDataArray = this.workflowData.stages.map(function(stage) {
+                return {
+                    key: stage.id,
+                    title: stage.title,
+                    description: stage.description || "",
+                    color: stage.color || "#cccccc"
+                };
+            });
+            
+            // Build link data
+            var linkDataArray = (this.workflowData.relations || []).map(function(relation) {
+                return {
+                    from: relation.sourceStageId,
+                    to: relation.targetStageId
+                };
+            });
+            
+            // Set the model
+            this.workflowDiagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
+            this.workflowDiagram.requestUpdate();
+        },
     },
     created: function () {
     },

@@ -341,6 +341,13 @@ public class WorkflowService : IWorkflowService
         return await _repo.IsUniqueTitleAsync(title, id).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task<Workflow> GetEnabledWorkflowAsync()
+    {
+        var workflows = await _repo.GetAllAsync().ConfigureAwait(false);
+        return workflows.FirstOrDefault(w => w.IsEnabled);
+    }
+
     /// <summary>
     /// Initializes Draft stages for existing workflows with all available roles.
     /// This should be run once at project startup.

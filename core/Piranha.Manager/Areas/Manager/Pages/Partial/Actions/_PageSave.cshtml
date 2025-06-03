@@ -29,7 +29,8 @@
     </button>
 }
 
-@if ((await Auth.AuthorizeAsync(User, Permission.PagesPublish)).Succeeded)
+
+@*@if ((await Auth.AuthorizeAsync(User, Permission.PagesPublish)).Succeeded)
 {
     <div class="btn-group d-none d-lg-inline-flex" role="group">
         <button v-on:click.prevent="save" :class="{ 'btn-loading' : saving }" type="button" class="btn btn-success btn-labeled">
@@ -55,4 +56,4 @@
     <button v-else v-on:click.prevent="save" class="btn btn-success btn-icon d-inline-block d-lg-none" title="@Localizer.General["Publish"]">
         <i class="fas fa-check"></i>
     </button>
-}
+}*@

@@ -48,14 +48,51 @@
                         </div>
                     </div>
 
+                    <!-- Workflow Visualization and Stage Selection -->
+                    <div class="row" v-if="workflowData">
+                        <div class="col">
+                            <div class="form-group">
+                                <label>Workflow Overview</label>
+                                <div class="workflow-container border rounded p-3 bg-light">
+                                    <!-- GoJS Diagram Container -->
+                                    <div id="changeRequestWorkflowDiagram" class="workflow-diagram mb-3" style="height: 200px; border: 1px solid #ddd; background: white;"></div>
+                                    
+                                    <!-- Stage Selection -->
+                                    <div class="stage-selection">
+                                        <label for="targetStageSelect">Select Target Stage <span class="text-danger">*</span></label>
+                                        <select 
+                                            id="targetStageSelect" 
+                                            v-model="selectedTargetStage" 
+                                            class="form-control"
+                                            :class="{ 'is-invalid': targetStageError }"
+                                            required>
+                                            <option value="">Choose a stage...</option>
+                                            <option 
+                                                v-for="stage in accessibleStages" 
+                                                :key="stage.id" 
+                                                :value="stage.id">
+                                                {{ stage.title }} - {{ stage.description }}
+                                            </option>
+                                        </select>
+                                        <div v-if="targetStageError" class="invalid-feedback">
+                                            {{ targetStageError }}
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            Showing stages accessible from the current 'Draft' stage
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Current content summary -->
                     <div class="row">
                         <div class="col">
                             <div class="alert alert-info">
                                 <h6><i class="fas fa-info-circle"></i> Content Summary</h6>
                                 <p><strong>Title:</strong> {{ title }}</p>
-                                <p v-if="slug"><strong>Slug:</strong> {{ slug }}</p>
-                                <p><strong>Status:</strong> {{ state }}</p>
+                                <p><strong>Content:</strong> <i>Content changes will be displayed here</i> </p>
                                 <p class="mb-0"><small class="text-muted">This change request will capture the current state of your content for review.</small></p>
                             </div>
                         </div>
@@ -69,7 +106,7 @@
                 <button 
                     type="button" 
                     v-on:click.prevent="submitChangeRequest()" 
-                    class="btn btn-warning"
+                    class="btn btn-warning text-white"
                     :disabled="submittingChangeRequest || !changeRequestTitle"
                     :class="{ 'btn-loading': submittingChangeRequest }">
                     <i class="fas fa-paper-plane"></i>

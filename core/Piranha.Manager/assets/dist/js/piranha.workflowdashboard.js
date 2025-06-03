@@ -28,6 +28,8 @@ piranha.workflowdashboard = new function () {
                         pageSize: 20
                     },
                     changeHistoryDebounceTimeout: null,
+                    selectedWorkflowIdForStages: 'all', // Default to show all stages initially
+                    allWorkflows: [], // To store workflows from /api/workflow/list
                     // Change request details
                     selectedChangeRequestId: null,
                     changeRequestDetails: null,
@@ -46,8 +48,10 @@ piranha.workflowdashboard = new function () {
                 },
                 computed: {
                     maxStageCount: function () {
-                        if (!this.overview || !this.overview.stageDistribution) return 0;
-                        return Math.max(...this.overview.stageDistribution.map(s => s.count), 1);
+                        if (!this.filteredStageDistribution || this.filteredStageDistribution.length === 0) {
+                            return 1; // Avoid division by zero, ensure progress bar can render
+                        }
+                        return Math.max(...this.filteredStageDistribution.map(s => s.count), 1);
                     },
                     formattedContentSnapshot: function () {
                         if (!this.changeRequestDetails || !this.changeRequestDetails.changeRequest.contentSnapshot) {
@@ -72,6 +76,27 @@ piranha.workflowdashboard = new function () {
                         } else {
                             return content;
                         }
+                    },
+                    workflowOptionsForDistribution: function() {
+                        var options = [{ value: 'all', text: 'All Workflows' }];
+                        if (this.allWorkflows && this.allWorkflows.length > 0) {
+                            this.allWorkflows.forEach(function(wf) {
+                                options.push({
+                                    value: wf.id,
+                                    text: wf.title + (wf.isEnabled ? ' (Active)' : '') // Assuming 'title' from /list endpoint
+                                });
+                            });
+                        }
+                        return options;
+                    },
+                    filteredStageDistribution: function() {
+                        if (!this.overview || !this.overview.stageDistribution) {
+                            return [];
+                        }
+                        if (this.selectedWorkflowIdForStages === 'all' || !this.selectedWorkflowIdForStages) {
+                            return this.overview.stageDistribution;
+                        }
+                        return this.overview.stageDistribution.filter(s => s.workflowId === this.selectedWorkflowIdForStages);
                     }
                 },
                 mounted: function () {
@@ -94,6 +119,7 @@ piranha.workflowdashboard = new function () {
                         self.loading = true;
                         self.error = null;
 
+                        // First, fetch the main overview data
                         fetch(piranha.baseUrl + "manager/api/workflow-dashboard/overview", {
                             method: "GET",
                             headers: {
@@ -106,13 +132,44 @@ piranha.workflowdashboard = new function () {
                             }
                             return response.json();
                         })
-                        .then(function (data) {
-                            self.overview = data;
+                        .then(function (overviewData) {
+                            self.overview = overviewData;
+
+                            // Second, fetch the list of all workflows
+                            return fetch(piranha.baseUrl + "manager/api/workflow/list");
+                        })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error("Failed to load workflow list");
+                            }
+                            return response.json();
+                        })
+                        .then(function (workflowListData) {
+                            self.allWorkflows = workflowListData;
+
+                            // Set default selected workflow for stage distribution using allWorkflows
+                            if (self.allWorkflows && self.allWorkflows.length > 0) {
+                                const enabledWorkflow = self.allWorkflows.find(wf => wf.isEnabled);
+                                if (enabledWorkflow) {
+                                    self.selectedWorkflowIdForStages = enabledWorkflow.id;
+                                } else {
+                                    // If no workflow is explicitly enabled, check if there's only one workflow and select it.
+                                    // Otherwise, default to 'all'.
+                                    if (self.allWorkflows.length === 1) {
+                                        self.selectedWorkflowIdForStages = self.allWorkflows[0].id;
+                                    } else {
+                                        self.selectedWorkflowIdForStages = 'all';
+                                    }
+                                }
+                            } else {
+                                self.selectedWorkflowIdForStages = 'all';
+                            }
+
                             self.loading = false;
                         })
                         .catch(function (error) {
-                            console.error("Error loading overview:", error);
-                            self.error = error.message || "Failed to load dashboard overview";
+                            console.error("Error loading dashboard data:", error);
+                            self.error = error.message || "Failed to load dashboard data";
                             self.loading = false;
                         });
                     },

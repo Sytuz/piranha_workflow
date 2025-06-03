@@ -82,4 +82,13 @@ public class WorkflowService
     {
         return await _api.Workflows.IsUniqueTitleAsync(title, id);
     }
+
+    /// <summary>
+    /// Gets the enabled workflow with stages and relations.
+    /// </summary>
+    /// <returns>The enabled workflow</returns>
+    public async Task<Workflow> GetEnabledWorkflowAsync()
+    {
+        return await _api.Workflows.GetEnabledWorkflowAsync();
+    }
 }
