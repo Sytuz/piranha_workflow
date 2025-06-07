@@ -22,14 +22,19 @@ namespace Piranha.Repositories
         /// </summary>
         /// <param name="userId">The user id</param>
         /// <returns>The change requests</returns>
-        Task<IEnumerable<ChangeRequest>> GetByCreatedByIdAsync(Guid userId);
-
-        /// <summary>
+        Task<IEnumerable<ChangeRequest>> GetByCreatedByIdAsync(Guid userId);        /// <summary>
         /// Gets all change requests in the specified stage.
         /// </summary>
         /// <param name="stageId">The stage id</param>
         /// <returns>The change requests</returns>
         Task<IEnumerable<ChangeRequest>> GetByStageIdAsync(Guid stageId);
+
+        /// <summary>
+        /// Gets all change requests for the specified content.
+        /// </summary>
+        /// <param name="contentId">The content id</param>
+        /// <returns>The change requests</returns>
+        Task<IEnumerable<ChangeRequest>> GetByContentIdAsync(Guid contentId);
 
         /// <summary>
         /// Gets the change request with the specified id.

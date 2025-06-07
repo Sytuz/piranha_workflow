@@ -121,13 +121,13 @@ public static class Actions
             },
             new ToolbarAction
             {
-                InternalId = "SubmitChangeRequest",
-                ActionView = "Partial/Actions/_PageSubmitChangeRequest"
+                InternalId = "Save",
+                ActionView = "Partial/Actions/_PageSave"
             },
             new ToolbarAction
             {
-                InternalId = "Save",
-                ActionView = "Partial/Actions/_PageSave"
+                InternalId = "SubmitChangeRequest",
+                ActionView = "Partial/Actions/_PageSubmitChangeRequest"
             },
             new ToolbarAction
             {

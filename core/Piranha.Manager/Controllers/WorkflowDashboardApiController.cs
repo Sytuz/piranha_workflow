@@ -97,8 +97,10 @@ namespace Piranha.Manager.Controllers
                             {
                                 StageId = stage.Id,
                                 StageName = stage.Title,
+                                StageColor = stage.Color,
                                 Count = count,
-                                WorkflowName = workflow.Title
+                                WorkflowName = workflow.Title,
+                                WorkflowId = workflow.Id
                             });
                         }
                     }

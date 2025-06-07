@@ -67,6 +67,33 @@ namespace Piranha.Manager.Controllers
         }
 
         /// <summary>
+        /// Gets the enabled workflow with stages and relations for change requests.
+        /// </summary>
+        /// <returns>The enabled workflow with stages and relations</returns>
+        [HttpGet]
+        [Route("enabled")]
+        public async Task<IActionResult> GetEnabledWorkflow()
+        {
+            try
+            {
+                var workflow = await _service.GetEnabledWorkflowAsync();
+                if (workflow == null)
+                {
+                    return NotFound(new ErrorMessage { Body = "No enabled workflow found" });
+                }
+
+                return Ok(workflow);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error retrieving enabled workflow: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
         /// Creates or updates the given workflow.
         /// </summary>
         /// <param name="model">The workflow</param>

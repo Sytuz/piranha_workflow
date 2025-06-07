@@ -56,6 +56,12 @@ namespace Piranha.Services
         Task<bool> IsUniqueTitleAsync(string title, Guid? id = null);
 
         /// <summary>
+        /// Gets the enabled workflow with stages and relations.
+        /// </summary>
+        /// <returns>The enabled workflow</returns>
+        Task<Workflow> GetEnabledWorkflowAsync();
+
+        /// <summary>
         /// Initializes Draft stages for existing workflows with all available roles.
         /// This should be run once at project startup.
         /// </summary>

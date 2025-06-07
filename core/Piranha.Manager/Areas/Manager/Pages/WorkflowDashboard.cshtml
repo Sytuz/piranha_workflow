@@ -118,32 +118,42 @@
                 <!-- Stage Distribution -->
                 <div class="col-md-6 mb-4">
                     <div class="card h-100">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">
                                 <i class="fas fa-chart-pie"></i> Stage Distribution
                             </h5>
+                            <div v-if="workflowOptionsForDistribution.length > 1" class="ml-auto" style="max-width: 250px;">
+                                <select class="custom-select custom-select-sm" v-model="selectedWorkflowIdForStages">
+                                    <option v-for="option in workflowOptionsForDistribution" :key="option.value" :value="option.value">
+                                        {{ option.text }}
+                                    </option>
+                                </select>
+                            </div>
                         </div>
                         <div class="card-body">
-                            <div v-if="overview.stageDistribution && overview.stageDistribution.length > 0">
-                                <div v-for="stage in overview.stageDistribution" class="stage-item mb-3">
+                            <div v-if="filteredStageDistribution && filteredStageDistribution.length > 0">
+                                <div v-for="stage in filteredStageDistribution" class="stage-item mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="stage-name">{{ stage.stageName }}</span>
+                                        <span class="stage-name">
+                                            <span class="status-dot me-2" :style="{ backgroundColor: stage.stageColor || '#cccccc' }"></span>
+                                            {{ stage.stageName }}
+                                        </span>
                                         <span class="badge badge-secondary">{{ stage.count }}</span>
                                     </div>
-                                    <div class="stage-workflow">
+                                    <div class="stage-workflow" v-if="selectedWorkflowIdForStages === 'all'">
                                         <small class="text-muted">{{ stage.workflowName }}</small>
                                     </div>
                                     <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar" role="progressbar" 
+                                        <div class="progress-bar" role="progressbar"
                                              :style="{ width: getStagePercentage(stage.count) + '%' }"
-                                             :aria-valuenow="stage.count" aria-valuemin="0" aria-valuemax="100">
+                                             :aria-valuenow="stage.count" aria-valuemin="0" :aria-valuemax="maxStageCount">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div v-else class="text-center text-muted py-4">
                                 <i class="fas fa-chart-pie fa-3x mb-3 opacity-50"></i>
-                                <p>No stage data available</p>
+                                <p>No stage data available for the selected filter.</p>
                             </div>
                         </div>
                     </div>
@@ -562,16 +572,7 @@
                             </div>
                         </div>
                         <div class="col-md-4 text-md-right">
-                            <div class="btn-group">
-                                <button v-for="action in changeRequestDetails.availableActions" 
-                                        v-on:click="executeAction(action, changeRequestDetails.changeRequest.id)"
-                                        :key="action.type" 
-                                        class="btn btn-sm"
-                                        :class="getActionButtonClass(action.type)"
-                                        :disabled="!action.enabled">
-                                    <i :class="action.icon"></i> {{ action.label }}
-                                </button>
-                            </div>
+                            <!-- Edit buttons removed for cleaner interface -->
                         </div>
                     </div>
 
@@ -648,17 +649,47 @@
                     <!-- Content Snapshot Preview -->
                     <div class="row">
                         <div class="col">
-                            <div class="card">
-                                <div class="card-header">
+                            <div class="card content-snapshot-container">
+                                <div class="card-header content-snapshot-header d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0"><i class="fas fa-code"></i> Content Snapshot</h6>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" 
+                                                class="btn btn-outline-info btn-sm me-2" 
+                                                :class="{ 'active': jsonFormatted }"
+                                                v-on:click="toggleJsonFormatting" 
+                                                :title="jsonFormatted ? 'Show Raw JSON' : 'Format JSON'">
+                                            <i class="fas fa-magic me-1"></i>
+                                            <i :class="jsonFormatted ? 'fas fa-compress-alt' : 'fas fa-expand-alt'"></i>
+                                            <span class="d-none d-sm-inline ms-1">{{ jsonFormatted ? 'Show Raw' : 'Show Formatted' }}</span>
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-outline-success btn-sm" 
+                                                v-on:click="copyContentSnapshot" 
+                                                title="Copy to Clipboard">
+                                            <i class="fas fa-copy"></i>
+                                            <span class="d-none d-sm-inline ms-1">Copy</span>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <div class="alert alert-info">
                                         <i class="fas fa-info-circle"></i> 
                                         This shows the content state captured when the change request was created.
                                     </div>
-                                    <div class="border p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
-                                        <pre class="mb-0">{{ changeRequestDetails.contentDiff.modifiedContent }}</pre>
+                                    <div v-if="!changeRequestDetails.changeRequest.contentSnapshot" class="text-center text-muted py-4">
+                                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                        <p class="mb-0">No content snapshot available for this change request.</p>
+                                    </div>
+                                    <div v-else class="content-snapshot-display border rounded bg-light position-relative" style="max-height: 500px; overflow: auto;">
+                                        <div class="p-3">
+                                            <pre class="mb-0 text-dark">{{ formattedContentSnapshot }}</pre>
+                                        </div>
+                                        <!-- Scroll indicator -->
+                                        <div v-if="formattedContentSnapshot.length > 1000" class="position-absolute" style="bottom: 10px; right: 10px; opacity: 0.7;">
+                                            <small class="text-muted">
+                                                <i class="fas fa-arrows-alt-v"></i> Scroll for more
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -668,16 +699,6 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <div class="btn-group" v-if="changeRequestDetails && changeRequestDetails.availableActions.length > 0">
-                    <button v-for="action in changeRequestDetails.availableActions" 
-                            v-on:click="executeAction(action, changeRequestDetails.changeRequest.id)"
-                            :key="action.type" 
-                            class="btn btn-sm"
-                            :class="getActionButtonClass(action.type)"
-                            :disabled="!action.enabled">
-                        <i :class="action.icon"></i> {{ action.label }}
-                    </button>
-                </div>
             </div>
         </div>
     </div>

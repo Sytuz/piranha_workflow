@@ -29,14 +29,19 @@ namespace Piranha.Services
         /// </summary>
         /// <param name="stageId">The stage id</param>
         /// <returns>The change requests</returns>
-        Task<IEnumerable<ChangeRequest>> GetByStageIdAsync(Guid stageId);
-
-        /// <summary>
+        Task<IEnumerable<ChangeRequest>> GetByStageIdAsync(Guid stageId);        /// <summary>
         /// Gets the change request with the specified id.
         /// </summary>
         /// <param name="id">The unique id</param>
         /// <returns>The change request</returns>
         Task<ChangeRequest> GetByIdAsync(Guid id);
+
+        /// <summary>
+        /// Gets all change requests for the specified content.
+        /// </summary>
+        /// <param name="contentId">The content id</param>
+        /// <returns>The change requests</returns>
+        Task<IEnumerable<ChangeRequest>> GetByContentIdAsync(Guid contentId);
 
         /// <summary>
         /// Gets all change requests.

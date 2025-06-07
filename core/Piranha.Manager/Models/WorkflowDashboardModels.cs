@@ -66,6 +66,16 @@ public class WorkflowStageCount
     /// Gets/sets the workflow name this stage belongs to.
     /// </summary>
     public string WorkflowName { get; set; }
+
+    /// <summary>
+    /// Gets/sets the workflow identifier this stage belongs to.
+    /// </summary>
+    public Guid WorkflowId { get; set; }
+
+    /// <summary>
+    /// Gets/sets the color used to represent this stage in the UI.
+    /// </summary>
+    public string StageColor { get; set; }
 }
 
 /// <summary>
