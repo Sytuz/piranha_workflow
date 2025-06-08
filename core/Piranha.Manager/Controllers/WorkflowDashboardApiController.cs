@@ -1,5 +1,5 @@
-
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace Piranha.Manager.Controllers
@@ -164,6 +165,136 @@ namespace Piranha.Manager.Controllers
         }
 
         /// <summary>
+        /// Gets tasks assigned to or created by the current user based on their roles and workflow stage access.
+        /// </summary>
+        /// <returns>The user's tasks</returns>
+        [Route("my-tasks")]
+        [HttpGet]
+        [Authorize(Policy = Permission.ChangeRequests)]
+        public async Task<IActionResult> GetMyTasks()
+        {
+            using var activity = _telemetryService.GetActivitySource().StartActivity("GetMyTasks");
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                // Get current user ID
+                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, "Unable to identify current user");
+                    return BadRequest(new { message = "Unable to identify current user" });
+                }
+
+                // Get current user's roles
+                var userRoles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+                
+                // Get all workflow stages to find stages accessible to user's roles
+                var allWorkflows = await _api.Workflows.GetAllAsync();
+                var accessibleStageIds = new List<Guid>();
+                
+                foreach (var workflow in allWorkflows)
+                {
+                    if (workflow.Stages != null)
+                    {
+                        foreach (var stage in workflow.Stages)
+                        {
+                            // Check if any of the user's roles are assigned to this stage
+                            if (stage.Roles != null && stage.Roles.Any(r => userRoles.Contains(r.RoleId)))
+                            {
+                                accessibleStageIds.Add(stage.Id);
+                            }
+                        }
+                    }
+                }
+
+                // Get all change requests and filter by accessible stages and user's own requests
+                var allChangeRequests = await _api.ChangeRequests.GetAllAsync();
+                var myTasks = allChangeRequests.Where(cr => 
+                    cr.CreatedById == userId || // Tasks created by the user
+                    accessibleStageIds.Contains(cr.StageId) // Tasks in stages accessible to user's roles
+                ).ToList();
+                
+                // Get workflows for reference (reuse already fetched workflows)
+                var workflows = allWorkflows;
+                
+                // Get all unique user IDs for name resolution
+                var allUserIds = myTasks.Select(cr => cr.CreatedById).Distinct();
+                var userNames = await _userResolutionService.GetUserNamesByIdsAsync(allUserIds);
+
+                // Convert change requests to task items with resolved data
+                var tasks = new List<object>();
+                foreach (var cr in myTasks)
+                {
+                    var userName = userNames.ContainsKey(cr.CreatedById) ? userNames[cr.CreatedById] : "Unknown User";
+                    var contentType = await _contentTypeResolutionService.GetContentTypeByIdAsync(cr.ContentId);
+                    var contentTitle = await _contentTypeResolutionService.GetContentTitleByIdAsync(cr.ContentId);
+
+                    // Get workflow name
+                    var workflow = workflows.FirstOrDefault(w => w.Id == cr.WorkflowId);
+                    var workflowName = workflow?.Title ?? "Unknown Workflow";
+
+                    // Determine task type based on user relationship
+                    var taskType = cr.CreatedById == userId ? "Created" : "Assigned";
+                    var action = $"{GetActionFromStatus(cr.Status)} ({taskType})";
+
+                    // Get available actions for this change request
+                    var availableActions = GetAvailableActionsForChangeRequest(cr, userId, accessibleStageIds);
+
+                    tasks.Add(new
+                    {
+                        Id = cr.Id,
+                        ContentTitle = !string.IsNullOrEmpty(contentTitle) ? contentTitle : cr.Title,
+                        ContentSlug = cr.ContentId.ToString(), // Using ContentId as slug for now
+                        ContentType = contentType,
+                        WorkflowName = workflowName,
+                        Action = action,
+                        User = userName,
+                        Timestamp = cr.LastModified,
+                        FromStage = GetPreviousStage(cr, workflows),
+                        ToStage = GetCurrentStage(cr, workflows),
+                        Status = cr.Status,
+                        TaskType = taskType,
+                        AvailableActions = availableActions
+                    });
+                }
+
+                // Sort by most recent first  
+                var sortedTasks = tasks.OrderByDescending(t => ((dynamic)t).Timestamp).ToList();
+
+                var createdByUserCount = sortedTasks.Count(t => ((dynamic)t).Action.Contains("Created"));
+                var assignedToUserCount = sortedTasks.Count(t => ((dynamic)t).Action.Contains("Assigned"));
+
+                // Record telemetry metrics
+                activity?.SetTag("user_id", userId.ToString());
+                activity?.SetTag("user_roles_count", userRoles.Count);
+                activity?.SetTag("accessible_stages_count", accessibleStageIds.Count);
+                activity?.SetTag("total_tasks", sortedTasks.Count);
+                activity?.SetTag("created_tasks", createdByUserCount);
+                activity?.SetTag("assigned_tasks", assignedToUserCount);
+
+                stopwatch.Stop();
+                _telemetryService.RecordWorkflowOperation("get_my_tasks", "success", stopwatch.Elapsed);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+
+                return Ok(new { 
+                    tasks = sortedTasks,
+                    totalCount = sortedTasks.Count,
+                    createdByUser = createdByUserCount,
+                    assignedToUser = assignedToUserCount
+                });
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _telemetryService.RecordWorkflowOperation("get_my_tasks", "error", stopwatch.Elapsed);
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                
+                return StatusCode(500, new { message = "Unable to load user tasks", error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Helper method to get action text from change request status.
         /// </summary>
         private string GetActionFromStatus(Piranha.Models.ChangeRequestStatus status)
@@ -208,6 +339,69 @@ namespace Piranha.Manager.Controllers
             }
             
             return "Initial";
+        }
+
+        /// <summary>
+        /// Gets available actions for a change request based on user permissions and status.
+        /// </summary>
+        private List<object> GetAvailableActionsForChangeRequest(Piranha.Models.ChangeRequest changeRequest, Guid userId, List<Guid> accessibleStageIds)
+        {
+            var actions = new List<object>();
+
+            // Check if user can perform actions on this change request
+            // User can act if they have access to the current stage or created the request
+            var canAct = changeRequest.CreatedById == userId || accessibleStageIds.Contains(changeRequest.StageId);
+
+            if (!canAct)
+            {
+                return actions; // No actions available
+            }
+
+            switch (changeRequest.Status)
+            {
+                case Piranha.Models.ChangeRequestStatus.Submitted:
+                case Piranha.Models.ChangeRequestStatus.InReview:
+                    // Only allow approve/reject if user has access to current stage
+                    if (accessibleStageIds.Contains(changeRequest.StageId))
+                    {
+                        actions.Add(new
+                        {
+                            Type = "approve",
+                            Label = "Approve",
+                            Enabled = true,
+                            Icon = "fas fa-check",
+                            Data = new { }
+                        });
+                        actions.Add(new
+                        {
+                            Type = "reject",
+                            Label = "Reject",
+                            Enabled = true,
+                            Icon = "fas fa-times",
+                            Data = new { }
+                        });
+                    }
+                    break;
+                case Piranha.Models.ChangeRequestStatus.Draft:
+                    // Allow edit for creator or stage users
+                    actions.Add(new
+                    {
+                        Type = "edit",
+                        Label = "Edit",
+                        Enabled = true,
+                        Icon = "fas fa-edit",
+                        Data = new { }
+                    });
+                    break;
+                case Piranha.Models.ChangeRequestStatus.Approved:
+                    // Could add publish action here if needed
+                    break;
+                case Piranha.Models.ChangeRequestStatus.Rejected:
+                    // Could add reopen action here if needed
+                    break;
+            }
+
+            return actions;
         }
 
         /// <summary>

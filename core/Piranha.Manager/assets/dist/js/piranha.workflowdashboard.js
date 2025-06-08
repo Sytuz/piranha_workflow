@@ -20,6 +20,9 @@ piranha.workflowdashboard = new function () {
                     analytics: null,
                     changeHistory: null,
                     loadingChanges: false,
+                    // My Tasks data
+                    myTasks: [],
+                    loadingMyTasks: false,
                     changeFilters: {
                         contentType: '',
                         changeType: '',
@@ -101,6 +104,7 @@ piranha.workflowdashboard = new function () {
                 },
                 mounted: function () {
                     this.loadOverview();
+                    this.loadMyTasks(); // Load My Tasks automatically on page load
                 },
                 methods: {
                     // Tab management
@@ -110,6 +114,8 @@ piranha.workflowdashboard = new function () {
                             this.loadAnalytics();
                         } else if (tab === 'changes' && !this.changeHistory) {
                             this.loadChangeHistory();
+                        } else if (tab === 'my-tasks' && !this.myTasks) {
+                            this.loadMyTasks();
                         }
                     },
 
@@ -206,6 +212,34 @@ piranha.workflowdashboard = new function () {
                         });
                     },
 
+                    loadMyTasks: function () {
+                        var self = this;
+                        self.loadingMyTasks = true;
+
+                        fetch(piranha.baseUrl + "manager/api/workflow-dashboard/my-tasks", {
+                            method: "GET",
+                            headers: {
+                                "Content-Type": "application/json"
+                            }
+                        })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error("Failed to load my tasks data");
+                            }
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            // Extract the tasks array from the API response
+                            self.myTasks = data.tasks || [];
+                            self.loadingMyTasks = false;
+                        })
+                        .catch(function (error) {
+                            console.error("Error loading my tasks:", error);
+                            self.error = error.message || "Failed to load my tasks";
+                            self.loadingMyTasks = false;
+                        });
+                    },
+
                     loadChangeHistory: function () {
                         var self = this;
                         self.loadingChanges = true;
@@ -285,6 +319,8 @@ piranha.workflowdashboard = new function () {
                             this.loadAnalytics();
                         } else if (this.activeTab === 'changes') {
                             this.loadChangeHistory();
+                        } else if (this.activeTab === 'my-tasks') {
+                            this.loadMyTasks();
                         }
                     },
 
@@ -490,6 +526,29 @@ piranha.workflowdashboard = new function () {
                         if (!dateString) return '';
                         var date = new Date(dateString);
                         return date.toLocaleString();
+                    },
+
+                    // Task-specific helper methods
+                    getActionableTasksCount: function () {
+                        if (!this.myTasks || !Array.isArray(this.myTasks)) return 0;
+                        return this.myTasks.filter(function(task) {
+                            return task.AvailableActions && task.AvailableActions.length > 0 && 
+                                   task.AvailableActions.some(function(action) { return action.Enabled; });
+                        }).length;
+                    },
+
+                    executeTaskAction: function (task, action) {
+                        // Set up the action data similar to the existing flow
+                        this.pendingAction = action;
+                        this.selectedChangeRequestId = task.Id;
+                        this.actionData = {
+                            comments: '',
+                            reason: ''
+                        };
+                        this.actionError = null;
+                        
+                        // Show the confirmation modal
+                        $('#actionConfirmationModal').modal('show');
                     },
 
                     // Content snapshot methods

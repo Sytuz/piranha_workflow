@@ -1,0 +1,171 @@
+@page "~/manager/mytasks"
+@model MyTasksViewModel
+@inject ManagerLocalizer Localizer
+@inject Piranha.IApi Api
+@{
+    ViewBag.Title = "My Tasks";
+    ViewBag.MenuItem = "MyTasks";
+}
+@section script
+{
+    <script src="~/manager/assets/js/piranha.mytasks.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script>
+        piranha.permissions.load(function () {
+            piranha.mytasks.load();
+        });
+    </script>
+}
+
+<div id="mytasks">
+    <div class="top">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
+                <li class="breadcrumb-item active" aria-current="page">My Tasks</li>
+            </ol>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="top-nav">
+                @foreach (var action in Piranha.Manager.Actions.Toolbars.MyTasksList)
+                {
+                    <partial name="@action.ActionView" />
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="app" :class="{ ready: !loading }">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col">
+                    <div class="btn-group mb-3">
+                        <button v-on:click.prevent="setStatus('all')" class="btn btn-sm" :class="{ 'btn-primary': state === 'all', 'btn-light': state !== 'all' }">@Localizer.General["All"]</button>
+                        <button v-on:click.prevent="setStatus('pending')" class="btn btn-sm" :class="{ 'btn-primary': state === 'pending', 'btn-light': state !== 'pending' }">Pending</button>
+                        <button v-on:click.prevent="setStatus('approved')" class="btn btn-sm" :class="{ 'btn-primary': state === 'approved', 'btn-light': state !== 'approved' }">Approved</button>
+                        <button v-on:click.prevent="setStatus('rejected')" class="btn btn-sm" :class="{ 'btn-primary': state === 'rejected', 'btn-light': state !== 'rejected' }">Rejected</button>
+                    </div>
+                    
+                    <div v-if="filteredItems.length === 0" class="empty-info">
+                        <p v-if="loading">Loading your tasks...</p>
+                        <p v-else-if="state === 'all'">You have no tasks assigned to you.</p>
+                        <p v-else>No {{ state }} tasks found.</p>
+                    </div>
+                    
+                    <table v-else class="table table-borderless">
+                        <thead>
+                            <tr>
+                                <th class="w-30">Content</th>
+                                <th class="w-20">Workflow</th>
+                                <th class="w-15">Current Stage</th>
+                                <th class="w-10">Status</th>
+                                <th class="w-15">Created</th>
+                                <th class="w-10 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody v-for="task in filteredItems" :key="task.id">
+                            <tr>
+                                <td class="align-middle">
+                                    <div>
+                                        <strong>
+                                            <a v-if="task.editUrl" :href="task.editUrl" target="_blank">{{ task.contentTitle }}</a>
+                                            <span v-else>{{ task.contentTitle }}</span>
+                                        </strong>
+                                        <small class="text-muted d-block">{{ task.contentType }}</small>
+                                    </div>
+                                </td>
+                                <td class="align-middle">{{ task.workflowName }}</td>
+                                <td class="align-middle">{{ task.currentStage }}</td>
+                                <td class="align-middle">
+                                    <span class="badge" :class="{
+                                        'badge-warning': task.status === 'Pending',
+                                        'badge-success': task.status === 'Approved',
+                                        'badge-danger': task.status === 'Rejected',
+                                        'badge-secondary': task.status === 'Draft'
+                                    }">{{ task.status }}</span>
+                                </td>
+                                <td class="align-middle">{{ formatDate(task.created) }}</td>
+                                <td class="align-middle text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button v-if="task.availableActions.includes('approve')" 
+                                                v-on:click.prevent="approveTask(task)" 
+                                                class="btn btn-success btn-sm" 
+                                                title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button v-if="task.availableActions.includes('reject')" 
+                                                v-on:click.prevent="rejectTask(task)" 
+                                                class="btn btn-danger btn-sm" 
+                                                title="Reject">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        <a v-if="task.editUrl" 
+                                           :href="task.editUrl" 
+                                           target="_blank" 
+                                           class="btn btn-primary btn-sm" 
+                                           title="Edit Content">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="task.notes" class="task-notes">
+                                <td colspan="6" class="pt-0">
+                                    <small class="text-muted">
+                                        <strong>Notes:</strong> {{ task.notes }}
+                                    </small>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Confirmation Modal -->
+<div id="actionConfirmationModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="actionConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="actionConfirmationModalLabel">
+                    {{ pendingAction ? pendingAction.label : '' }} Task
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div v-if="pendingAction && pendingAction.type === 'approve'">
+                    <p>Are you sure you want to approve this task?</p>
+                    <div class="form-group">
+                        <label for="approvalComments">Approval Comments (Optional)</label>
+                        <textarea id="approvalComments" v-model="actionData.comments" class="form-control" rows="3" 
+                                  placeholder="Add any comments about the approval..."></textarea>
+                    </div>
+                </div>
+                <div v-if="pendingAction && pendingAction.type === 'reject'">
+                    <p>Are you sure you want to reject this task?</p>
+                    <div class="form-group">
+                        <label for="rejectionReason">Rejection Reason *</label>
+                        <textarea id="rejectionReason" v-model="actionData.reason" class="form-control" rows="3" 
+                                  placeholder="Please provide a reason for rejecting this task..." required></textarea>
+                        <div v-if="actionError" class="invalid-feedback d-block">{{ actionError }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" v-on:click="cancelAction">Cancel</button>
+                <button type="button" v-on:click="confirmAction" class="btn" 
+                        :class="{ 'btn-success': pendingAction && pendingAction.type === 'approve', 'btn-danger': pendingAction && pendingAction.type === 'reject' }"
+                        :disabled="executingAction">
+                    <span v-if="executingAction" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <i v-if="!executingAction && pendingAction && pendingAction.type === 'approve'" class="fas fa-check"></i>
+                    <i v-if="!executingAction && pendingAction && pendingAction.type === 'reject'" class="fas fa-times"></i>
+                    {{ pendingAction ? pendingAction.label : '' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
