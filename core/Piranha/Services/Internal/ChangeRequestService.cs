@@ -23,6 +23,7 @@ namespace Piranha.Services
         private readonly IChangeRequestRepository _repo;
         private readonly IWorkflowRepository _workflowRepo;
         private readonly IWorkflowStageRepository _stageRepo;
+        private readonly IChangeRequestCommentRepository _commentRepo;
 
         /// <summary>
         /// Default constructor.
@@ -30,11 +31,13 @@ namespace Piranha.Services
         /// <param name="repo">The change request repository</param>
         /// <param name="workflowRepo">The workflow repository</param>
         /// <param name="stageRepo">The workflow stage repository</param>
-        public ChangeRequestService(IChangeRequestRepository repo, IWorkflowRepository workflowRepo, IWorkflowStageRepository stageRepo)
+        /// <param name="commentRepo">The change request comment repository</param>
+        public ChangeRequestService(IChangeRequestRepository repo, IWorkflowRepository workflowRepo, IWorkflowStageRepository stageRepo, IChangeRequestCommentRepository commentRepo)
         {
             _repo = repo;
             _workflowRepo = workflowRepo;
             _stageRepo = stageRepo;
+            _commentRepo = commentRepo;
         }
 
         /// <inheritdoc />
@@ -199,8 +202,8 @@ namespace Piranha.Services
                 throw new ValidationException("Only the creator can submit a change request");
             }
 
-            // Update status to submitted
-            changeRequest.Status = ChangeRequestStatus.Submitted;
+            // Update status to in review
+            changeRequest.Status = ChangeRequestStatus.InReview;
             await _repo.SaveAsync(changeRequest).ConfigureAwait(false);
             
             return changeRequest;
@@ -235,15 +238,20 @@ namespace Piranha.Services
             {
                 var allowedTransition = workflow.Relations?
                     .Any(r => r.SourceStageId == changeRequest.StageId && r.TargetStageId == stageId);
-                
+
                 if (allowedTransition != true)
                 {
                     throw new ValidationException($"Transition from '{currentStage.Title}' to '{targetStage.Title}' is not allowed");
                 }
             }
 
-            // Move to the target stage
-            return await _repo.MoveToStageAsync(id, stageId).ConfigureAwait(false);
+            // Set the previous stage before moving
+            changeRequest.PreviousStageId = changeRequest.StageId;
+            changeRequest.StageId = stageId;
+            changeRequest.LastModified = DateTime.UtcNow;
+
+            await _repo.SaveAsync(changeRequest).ConfigureAwait(false);
+            return changeRequest;
         }
 
         /// <inheritdoc />
@@ -252,9 +260,7 @@ namespace Piranha.Services
             // Basic validation - workflow must exist and be enabled
             var workflow = await _workflowRepo.GetByIdAsync(workflowId).ConfigureAwait(false);
             return workflow != null && workflow.IsEnabled;
-        }
-
-        /// <inheritdoc />
+        }        /// <inheritdoc />
         public async Task<ChangeRequest> ApproveAsync(Guid id, Guid userId, string comments = null)
         {
             var changeRequest = await _repo.GetByIdAsync(id).ConfigureAwait(false);
@@ -264,29 +270,52 @@ namespace Piranha.Services
             }
 
             // Validate that the change request can be approved
-            if (changeRequest.Status != ChangeRequestStatus.Submitted && 
-                changeRequest.Status != ChangeRequestStatus.InReview)
+            if (changeRequest.Status != ChangeRequestStatus.InReview)
             {
-                throw new ValidationException("Only submitted or in-review change requests can be approved");
+                throw new ValidationException("Only in-review change requests can be approved");
             }
 
-            // Update status to approved
-            changeRequest.Status = ChangeRequestStatus.Approved;
-            changeRequest.LastModified = DateTime.UtcNow;
+            // Get the workflow to find the next stage
+            var workflow = await _workflowRepo.GetByIdAsync(changeRequest.WorkflowId).ConfigureAwait(false);
+            if (workflow == null)
+            {
+                throw new ValidationException("Workflow not found");
+            }
 
-            // Add approval comments to notes if provided
+            var currentStage = workflow.Stages?.FirstOrDefault(s => s.Id == changeRequest.StageId);
+            if (currentStage == null)
+            {
+                throw new ValidationException("Current stage not found");
+            }
+
+            // Find the next stage based on workflow relations
+            var nextStageRelation = workflow.Relations?.FirstOrDefault(r => r.SourceStageId == changeRequest.StageId);
+            if (nextStageRelation == null)
+            {
+                throw new ValidationException("No valid transition found from current stage");
+            }
+
+            var nextStage = workflow.Stages?.FirstOrDefault(s => s.Id == nextStageRelation.TargetStageId);
+            if (nextStage == null)
+            {
+                throw new ValidationException("Next stage not found");
+            }
+
+            // Create approval comment if comments provided
             if (!string.IsNullOrEmpty(comments))
             {
-                changeRequest.Notes = string.IsNullOrEmpty(changeRequest.Notes) 
-                    ? $"Approved: {comments}" 
-                    : $"{changeRequest.Notes}\n\nApproved: {comments}";
+                await AddApprovalCommentAsync(id, userId, "System User", comments, changeRequest.StageId).ConfigureAwait(false);
             }
+
+            // Move to next stage and update status
+            changeRequest.PreviousStageId = changeRequest.StageId;
+            changeRequest.StageId = nextStage.Id;
+            changeRequest.Status = nextStage.IsPublished ? ChangeRequestStatus.Published : ChangeRequestStatus.InReview;
+            changeRequest.LastModified = DateTime.UtcNow;
 
             await _repo.SaveAsync(changeRequest).ConfigureAwait(false);
             return changeRequest;
-        }
-
-        /// <inheritdoc />
+        }        /// <inheritdoc />
         public async Task<ChangeRequest> RejectAsync(Guid id, Guid userId, string reason)
         {
             var changeRequest = await _repo.GetByIdAsync(id).ConfigureAwait(false);
@@ -296,25 +325,20 @@ namespace Piranha.Services
             }
 
             // Validate that the change request can be rejected
-            if (changeRequest.Status != ChangeRequestStatus.Submitted && 
-                changeRequest.Status != ChangeRequestStatus.InReview)
+            if (changeRequest.Status != ChangeRequestStatus.InReview)
             {
-                throw new ValidationException("Only submitted or in-review change requests can be rejected");
+                throw new ValidationException("Only in-review change requests can be rejected");
             }
 
-            if (string.IsNullOrWhiteSpace(reason))
+            // Create rejection comment
+            if (!string.IsNullOrEmpty(reason))
             {
-                throw new ValidationException("Rejection reason is required");
+                await AddRejectionCommentAsync(id, userId, "System User", reason, changeRequest.StageId).ConfigureAwait(false);
             }
 
             // Update status to rejected
             changeRequest.Status = ChangeRequestStatus.Rejected;
             changeRequest.LastModified = DateTime.UtcNow;
-
-            // Add rejection reason to notes
-            changeRequest.Notes = string.IsNullOrEmpty(changeRequest.Notes) 
-                ? $"Rejected: {reason}" 
-                : $"{changeRequest.Notes}\n\nRejected: {reason}";
 
             await _repo.SaveAsync(changeRequest).ConfigureAwait(false);
             return changeRequest;
@@ -384,7 +408,6 @@ namespace Piranha.Services
 
             switch (changeRequest.Status)
             {
-                case ChangeRequestStatus.Submitted:
                 case ChangeRequestStatus.InReview:
                     actions.Add(new
                     {
@@ -416,6 +439,114 @@ namespace Piranha.Services
             }
 
             return actions;
+        }
+
+        // Comment-related methods implementation
+
+        /// <inheritdoc />
+        public async Task<IEnumerable<ChangeRequestComment>> GetCommentsAsync(Guid changeRequestId)
+        {
+            return await _commentRepo.GetByChangeRequestIdAsync(changeRequestId).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<ChangeRequestComment> AddCommentAsync(Guid changeRequestId, Guid authorId, string authorName, string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                throw new ValidationException("Comment content is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(authorName))
+            {
+                throw new ValidationException("Author name is required");
+            }
+
+            var comment = new ChangeRequestComment
+            {
+                Id = Guid.NewGuid(),
+                ChangeRequestId = changeRequestId,
+                AuthorId = authorId,
+                AuthorName = authorName,
+                Content = content,
+                CreatedAt = DateTime.UtcNow,
+                IsApprovalComment = false
+            };
+
+            await _commentRepo.SaveAsync(comment).ConfigureAwait(false);
+            return comment;
+        }
+
+        /// <inheritdoc />
+        public async Task<ChangeRequestComment> AddApprovalCommentAsync(Guid changeRequestId, Guid authorId, string authorName, string content, Guid stageId)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                throw new ValidationException("Approval comment content is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(authorName))
+            {
+                throw new ValidationException("Author name is required");
+            }
+
+            var comment = new ChangeRequestComment
+            {
+                Id = Guid.NewGuid(),
+                ChangeRequestId = changeRequestId,
+                AuthorId = authorId,
+                AuthorName = authorName,
+                Content = content,
+                CreatedAt = DateTime.UtcNow,
+                IsApprovalComment = true,
+                ApprovalType = ApprovalType.Approval,
+                StageId = stageId
+            };
+
+            await _commentRepo.SaveAsync(comment).ConfigureAwait(false);
+            return comment;
+        }
+
+        /// <inheritdoc />
+        public async Task<ChangeRequestComment> AddRejectionCommentAsync(Guid changeRequestId, Guid authorId, string authorName, string content, Guid stageId)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                throw new ValidationException("Rejection comment content is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(authorName))
+            {
+                throw new ValidationException("Author name is required");
+            }
+
+            var comment = new ChangeRequestComment
+            {
+                Id = Guid.NewGuid(),
+                ChangeRequestId = changeRequestId,
+                AuthorId = authorId,
+                AuthorName = authorName,
+                Content = content,
+                CreatedAt = DateTime.UtcNow,
+                IsApprovalComment = true,
+                ApprovalType = ApprovalType.Rejection,
+                StageId = stageId
+            };
+
+            await _commentRepo.SaveAsync(comment).ConfigureAwait(false);
+            return comment;
+        }
+
+        /// <inheritdoc />
+        public async Task DeleteCommentAsync(Guid commentId)
+        {
+            var comment = await _commentRepo.GetByIdAsync(commentId).ConfigureAwait(false);
+            if (comment == null)
+            {
+                throw new ValidationException("Comment not found");
+            }
+
+            await _commentRepo.DeleteAsync(commentId).ConfigureAwait(false);
         }
     }
 }

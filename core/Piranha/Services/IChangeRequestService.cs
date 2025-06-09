@@ -131,5 +131,52 @@ namespace Piranha.Services
         /// <param name="id">The change request id</param>
         /// <returns>The detailed change request information</returns>
         Task<object> GetDetailsAsync(Guid id);
+
+        // Comment-related methods
+        
+        /// <summary>
+        /// Gets all comments for the specified change request.
+        /// </summary>
+        /// <param name="changeRequestId">The change request id</param>
+        /// <returns>The comments</returns>
+        Task<IEnumerable<ChangeRequestComment>> GetCommentsAsync(Guid changeRequestId);
+
+        /// <summary>
+        /// Adds a comment to a change request.
+        /// </summary>
+        /// <param name="changeRequestId">The change request id</param>
+        /// <param name="authorId">The author id</param>
+        /// <param name="authorName">The author name</param>
+        /// <param name="content">The comment content</param>
+        /// <returns>The created comment</returns>
+        Task<ChangeRequestComment> AddCommentAsync(Guid changeRequestId, Guid authorId, string authorName, string content);
+
+        /// <summary>
+        /// Adds an approval comment to a change request.
+        /// </summary>
+        /// <param name="changeRequestId">The change request id</param>
+        /// <param name="authorId">The author id</param>
+        /// <param name="authorName">The author name</param>
+        /// <param name="content">The comment content</param>
+        /// <param name="stageId">The stage where approval was made</param>
+        /// <returns>The created approval comment</returns>
+        Task<ChangeRequestComment> AddApprovalCommentAsync(Guid changeRequestId, Guid authorId, string authorName, string content, Guid stageId);
+
+        /// <summary>
+        /// Adds a rejection comment to a change request.
+        /// </summary>
+        /// <param name="changeRequestId">The change request id</param>
+        /// <param name="authorId">The author id</param>
+        /// <param name="authorName">The author name</param>
+        /// <param name="content">The comment content</param>
+        /// <param name="stageId">The stage where rejection was made</param>
+        /// <returns>The created rejection comment</returns>
+        Task<ChangeRequestComment> AddRejectionCommentAsync(Guid changeRequestId, Guid authorId, string authorName, string content, Guid stageId);
+
+        /// <summary>
+        /// Deletes a comment.
+        /// </summary>
+        /// <param name="commentId">The comment id</param>
+        Task DeleteCommentAsync(Guid commentId);
     }
 }

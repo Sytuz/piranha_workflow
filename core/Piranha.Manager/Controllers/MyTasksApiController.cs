@@ -78,9 +78,9 @@ namespace Piranha.Manager.Controllers
                         _logger.LogDebug($"Processing change request: {changeRequest.Id} with status {changeRequest.Status}");
 
                         // Skip if change request is completed
-                        if (changeRequest.Status == ChangeRequestStatus.Approved)
+                        if (changeRequest.Status == ChangeRequestStatus.Published)
                         {
-                            _logger.LogDebug($"Skipping approved change request {changeRequest.Id}");
+                            _logger.LogDebug($"Skipping published change request {changeRequest.Id}");
                             continue;
                         }
 

@@ -520,6 +520,183 @@ namespace Piranha.Manager.Controllers
                 });
             }
         }
+
+        // Comment-related endpoints
+
+        /// <summary>
+        /// Gets all comments for a change request.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <returns>The comments for the change request</returns>
+        [HttpGet]
+        [Route("{id}/comments")]
+        [Authorize(Policy = Permission.ChangeRequests)]
+        public async Task<IActionResult> GetComments(Guid id)
+        {
+            try
+            {
+                var changeRequest = await _service.GetByIdAsync(id);
+                if (changeRequest == null)
+                {
+                    return NotFound(new ErrorMessage
+                    {
+                        Body = "Change request not found"
+                    });
+                }
+
+                var comments = await _service.GetCommentsAsync(id);
+                return Ok(comments);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error retrieving comments: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Adds a regular comment to a change request.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <param name="model">The comment model</param>
+        /// <returns>The created comment</returns>
+        [HttpPost]
+        [Route("{id}/comments")]
+        [Authorize(Policy = Permission.ChangeRequestsEdit)]
+        public async Task<IActionResult> AddComment(Guid id, [FromBody] AddCommentModel model)
+        {
+            try
+            {
+                var changeRequest = await _service.GetByIdAsync(id);
+                if (changeRequest == null)
+                {
+                    return NotFound(new ErrorMessage
+                    {
+                        Body = "Change request not found"
+                    });
+                }
+
+                var comment = await _service.AddCommentAsync(id, model.AuthorId, model.AuthorName, model.Content);
+                return Ok(comment);
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest(new ErrorMessage { Body = e.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error adding comment: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Adds an approval comment to a change request.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <param name="model">The approval comment model</param>
+        /// <returns>The created approval comment</returns>
+        [HttpPost]
+        [Route("{id}/comments/approval")]
+        [Authorize(Policy = Permission.ChangeRequestsEdit)]
+        public async Task<IActionResult> AddApprovalComment(Guid id, [FromBody] AddApprovalCommentModel model)
+        {
+            try
+            {
+                var changeRequest = await _service.GetByIdAsync(id);
+                if (changeRequest == null)
+                {
+                    return NotFound(new ErrorMessage
+                    {
+                        Body = "Change request not found"
+                    });
+                }
+
+                var comment = await _service.AddApprovalCommentAsync(id, model.AuthorId, model.AuthorName, model.Content, model.StageId);
+                return Ok(comment);
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest(new ErrorMessage { Body = e.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error adding approval comment: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Adds a rejection comment to a change request.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <param name="model">The rejection comment model</param>
+        /// <returns>The created rejection comment</returns>
+        [HttpPost]
+        [Route("{id}/comments/rejection")]
+        [Authorize(Policy = Permission.ChangeRequestsEdit)]
+        public async Task<IActionResult> AddRejectionComment(Guid id, [FromBody] AddRejectionCommentModel model)
+        {
+            try
+            {
+                var changeRequest = await _service.GetByIdAsync(id);
+                if (changeRequest == null)
+                {
+                    return NotFound(new ErrorMessage
+                    {
+                        Body = "Change request not found"
+                    });
+                }
+
+                var comment = await _service.AddRejectionCommentAsync(id, model.AuthorId, model.AuthorName, model.Content, model.StageId);
+                return Ok(comment);
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest(new ErrorMessage { Body = e.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error adding rejection comment: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Deletes a comment by its id.
+        /// </summary>
+        /// <param name="commentId">The comment id</param>
+        /// <returns>Success response</returns>
+        [HttpDelete]
+        [Route("comments/{commentId}")]
+        [Authorize(Policy = Permission.ChangeRequestsEdit)]
+        public async Task<IActionResult> DeleteComment(Guid commentId)
+        {
+            try
+            {
+                await _service.DeleteCommentAsync(commentId);
+                return Ok(new { message = "Comment deleted successfully" });
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest(new ErrorMessage { Body = e.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error deleting comment: {ex.Message}"
+                });
+            }
+        }
     }
 
     /// <summary>
@@ -743,5 +920,91 @@ namespace Piranha.Manager.Controllers
         public bool Enabled { get; set; }
         public string Icon { get; set; }
         public object Data { get; set; } // Additional data for the action
+    }
+
+    // Comment request/response models
+
+    /// <summary>
+    /// Model for adding a regular comment to a change request.
+    /// </summary>
+    public class AddCommentModel
+    {
+        /// <summary>
+        /// Gets/sets the author id.
+        /// </summary>
+        [Required]
+        public Guid AuthorId { get; set; }
+
+        /// <summary>
+        /// Gets/sets the author name.
+        /// </summary>
+        [Required]
+        public string AuthorName { get; set; }
+
+        /// <summary>
+        /// Gets/sets the comment content.
+        /// </summary>
+        [Required]
+        public string Content { get; set; }
+    }
+
+    /// <summary>
+    /// Model for adding an approval comment to a change request.
+    /// </summary>
+    public class AddApprovalCommentModel
+    {
+        /// <summary>
+        /// Gets/sets the author id.
+        /// </summary>
+        [Required]
+        public Guid AuthorId { get; set; }
+
+        /// <summary>
+        /// Gets/sets the author name.
+        /// </summary>
+        [Required]
+        public string AuthorName { get; set; }
+
+        /// <summary>
+        /// Gets/sets the comment content.
+        /// </summary>
+        [Required]
+        public string Content { get; set; }
+
+        /// <summary>
+        /// Gets/sets the stage id where the approval was made.
+        /// </summary>
+        [Required]
+        public Guid StageId { get; set; }
+    }
+
+    /// <summary>
+    /// Model for adding a rejection comment to a change request.
+    /// </summary>
+    public class AddRejectionCommentModel
+    {
+        /// <summary>
+        /// Gets/sets the author id.
+        /// </summary>
+        [Required]
+        public Guid AuthorId { get; set; }
+
+        /// <summary>
+        /// Gets/sets the author name.
+        /// </summary>
+        [Required]
+        public string AuthorName { get; set; }
+
+        /// <summary>
+        /// Gets/sets the comment content.
+        /// </summary>
+        [Required]
+        public string Content { get; set; }
+
+        /// <summary>
+        /// Gets/sets the stage id where the rejection was made.
+        /// </summary>
+        [Required]
+        public Guid StageId { get; set; }
     }
 }

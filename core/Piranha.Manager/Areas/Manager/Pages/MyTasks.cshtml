@@ -84,8 +84,8 @@
                                     <td class="align-middle">{{ task.currentStage }}</td>
                                     <td class="align-middle text-left">
                                         <span class="badge m-0" v-bind:class="{
-                            'badge-warning': task.status === 'Pending',
-                            'badge-success': task.status === 'Approved',
+                            'badge-warning': task.status === 'InReview',
+                            'badge-success': task.status === 'Published',
                             'badge-danger': task.status === 'Rejected',
                             'badge-secondary': task.status === 'Draft'
                         }">{{ task.status }}</span>

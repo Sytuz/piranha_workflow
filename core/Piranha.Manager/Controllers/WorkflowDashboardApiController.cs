@@ -70,10 +70,9 @@ namespace Piranha.Manager.Controllers
                 // Update workflow metrics
                 var totalContentInWorkflow = changeRequests.Count();
                 var pendingApproval = changeRequests.Count(cr => 
-                    cr.Status == Piranha.Models.ChangeRequestStatus.Submitted || 
                     cr.Status == Piranha.Models.ChangeRequestStatus.InReview);
                 var recentlyApproved = changeRequests.Count(cr => 
-                    cr.Status == Piranha.Models.ChangeRequestStatus.Approved && 
+                    cr.Status != Piranha.Models.ChangeRequestStatus.Draft && 
                     cr.LastModified >= DateTime.Now.AddDays(-7));
                 var rejected = changeRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Rejected);
 
@@ -165,136 +164,6 @@ namespace Piranha.Manager.Controllers
         }
 
         /// <summary>
-        /// Gets tasks assigned to or created by the current user based on their roles and workflow stage access.
-        /// </summary>
-        /// <returns>The user's tasks</returns>
-/*         [Route("my-tasks")]
-        [HttpGet]
-        [Authorize(Policy = Permission.ChangeRequests)]
-        public async Task<IActionResult> GetMyTasks()
-        {
-            using var activity = _telemetryService.GetActivitySource().StartActivity("GetMyTasks");
-            var stopwatch = Stopwatch.StartNew();
-
-            try
-            {
-                // Get current user ID
-                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-                {
-                    activity?.SetStatus(ActivityStatusCode.Error, "Unable to identify current user");
-                    return BadRequest(new { message = "Unable to identify current user" });
-                }
-
-                // Get current user's roles
-                var userRoles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
-                
-                // Get all workflow stages to find stages accessible to user's roles
-                var allWorkflows = await _api.Workflows.GetAllAsync();
-                var accessibleStageIds = new List<Guid>();
-                
-                foreach (var workflow in allWorkflows)
-                {
-                    if (workflow.Stages != null)
-                    {
-                        foreach (var stage in workflow.Stages)
-                        {
-                            // Check if any of the user's roles are assigned to this stage
-                            if (stage.Roles != null && stage.Roles.Any(r => userRoles.Contains(r.RoleId)))
-                            {
-                                accessibleStageIds.Add(stage.Id);
-                            }
-                        }
-                    }
-                }
-
-                // Get all change requests and filter by accessible stages and user's own requests
-                var allChangeRequests = await _api.ChangeRequests.GetAllAsync();
-                var myTasks = allChangeRequests.Where(cr => 
-                    cr.CreatedById == userId || // Tasks created by the user
-                    accessibleStageIds.Contains(cr.StageId) // Tasks in stages accessible to user's roles
-                ).ToList();
-                
-                // Get workflows for reference (reuse already fetched workflows)
-                var workflows = allWorkflows;
-                
-                // Get all unique user IDs for name resolution
-                var allUserIds = myTasks.Select(cr => cr.CreatedById).Distinct();
-                var userNames = await _userResolutionService.GetUserNamesByIdsAsync(allUserIds);
-
-                // Convert change requests to task items with resolved data
-                var tasks = new List<object>();
-                foreach (var cr in myTasks)
-                {
-                    var userName = userNames.ContainsKey(cr.CreatedById) ? userNames[cr.CreatedById] : "Unknown User";
-                    var contentType = await _contentTypeResolutionService.GetContentTypeByIdAsync(cr.ContentId);
-                    var contentTitle = await _contentTypeResolutionService.GetContentTitleByIdAsync(cr.ContentId);
-
-                    // Get workflow name
-                    var workflow = workflows.FirstOrDefault(w => w.Id == cr.WorkflowId);
-                    var workflowName = workflow?.Title ?? "Unknown Workflow";
-
-                    // Determine task type based on user relationship
-                    var taskType = cr.CreatedById == userId ? "Created" : "Assigned";
-                    var action = $"{GetActionFromStatus(cr.Status)} ({taskType})";
-
-                    // Get available actions for this change request
-                    var availableActions = GetAvailableActionsForChangeRequest(cr, userId, accessibleStageIds);
-
-                    tasks.Add(new
-                    {
-                        Id = cr.Id,
-                        ContentTitle = !string.IsNullOrEmpty(contentTitle) ? contentTitle : cr.Title,
-                        ContentSlug = cr.ContentId.ToString(), // Using ContentId as slug for now
-                        ContentType = contentType,
-                        WorkflowName = workflowName,
-                        Action = action,
-                        User = userName,
-                        Timestamp = cr.LastModified,
-                        FromStage = GetPreviousStage(cr, workflows),
-                        ToStage = GetCurrentStage(cr, workflows),
-                        Status = cr.Status,
-                        TaskType = taskType,
-                        AvailableActions = availableActions
-                    });
-                }
-
-                // Sort by most recent first  
-                var sortedTasks = tasks.OrderByDescending(t => ((dynamic)t).Timestamp).ToList();
-
-                var createdByUserCount = sortedTasks.Count(t => ((dynamic)t).Action.Contains("Created"));
-                var assignedToUserCount = sortedTasks.Count(t => ((dynamic)t).Action.Contains("Assigned"));
-
-                // Record telemetry metrics
-                activity?.SetTag("user_id", userId.ToString());
-                activity?.SetTag("user_roles_count", userRoles.Count);
-                activity?.SetTag("accessible_stages_count", accessibleStageIds.Count);
-                activity?.SetTag("total_tasks", sortedTasks.Count);
-                activity?.SetTag("created_tasks", createdByUserCount);
-                activity?.SetTag("assigned_tasks", assignedToUserCount);
-
-                stopwatch.Stop();
-                _telemetryService.RecordWorkflowOperation("get_my_tasks", "success", stopwatch.Elapsed);
-                activity?.SetStatus(ActivityStatusCode.Ok);
-
-                return Ok(new { 
-                    tasks = sortedTasks,
-                    totalCount = sortedTasks.Count,
-                    createdByUser = createdByUserCount,
-                    assignedToUser = assignedToUserCount
-                });
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _telemetryService.RecordWorkflowOperation("get_my_tasks", "error", stopwatch.Elapsed);
-                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                
-                return StatusCode(500, new { message = "Unable to load user tasks", error = ex.Message });
-            }
-        }
- */
-        /// <summary>
         /// Helper method to get action text from change request status.
         /// </summary>
         private string GetActionFromStatus(Piranha.Models.ChangeRequestStatus status)
@@ -302,9 +171,7 @@ namespace Piranha.Manager.Controllers
             return status switch
             {
                 Piranha.Models.ChangeRequestStatus.Draft => "Created",
-                Piranha.Models.ChangeRequestStatus.Submitted => "Submitted",
                 Piranha.Models.ChangeRequestStatus.InReview => "Under Review",
-                Piranha.Models.ChangeRequestStatus.Approved => "Approved",
                 Piranha.Models.ChangeRequestStatus.Rejected => "Rejected",
                 Piranha.Models.ChangeRequestStatus.Published => "Published",
                 _ => "Updated"
@@ -359,7 +226,6 @@ namespace Piranha.Manager.Controllers
 
             switch (changeRequest.Status)
             {
-                case Piranha.Models.ChangeRequestStatus.Submitted:
                 case Piranha.Models.ChangeRequestStatus.InReview:
                     // Only allow approve/reject if user has access to current stage
                     if (accessibleStageIds.Contains(changeRequest.StageId))
@@ -392,9 +258,6 @@ namespace Piranha.Manager.Controllers
                         Icon = "fas fa-edit",
                         Data = new { }
                     });
-                    break;
-                case Piranha.Models.ChangeRequestStatus.Approved:
-                    // Could add publish action here if needed
                     break;
                 case Piranha.Models.ChangeRequestStatus.Rejected:
                     // Could add reopen action here if needed
@@ -541,9 +404,11 @@ namespace Piranha.Manager.Controllers
                     {
                         Date = date,
                         ItemsCreated = changeRequests.Count(cr => cr.CreatedAt.Date == date),
-                        ItemsApproved = changeRequests.Count(cr => 
-                            cr.Status == Piranha.Models.ChangeRequestStatus.Approved && 
-                            cr.LastModified.Date == date),
+                        // TODO: Adapt this to use other entities to get approval data
+                        //ItemsApproved = changeRequests.Count(cr => 
+                        //    cr.Status == Piranha.Models.ChangeRequestStatus.Approved && 
+                        //    cr.LastModified.Date == date),
+                        ItemsApproved = 0,
                         ItemsRejected = changeRequests.Count(cr => 
                             cr.Status == Piranha.Models.ChangeRequestStatus.Rejected && 
                             cr.LastModified.Date == date),
@@ -590,7 +455,8 @@ namespace Piranha.Manager.Controllers
                         UserId = g.Key.ToString(),
                         UserName = userNameMapping.ContainsKey(g.Key) ? userNameMapping[g.Key] : "Unknown User",
                         ItemsProcessed = g.Count(),
-                        ItemsApproved = g.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Approved),
+                        //ItemsApproved = g.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Approved),
+                        ItemsApproved = 0, // TODO: Adapt this to use other entities to get approval data
                         ItemsRejected = g.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Rejected),
                         AverageProcessingTimeHours = CalculateUserAverageProcessingTime(g)
                     }).ToList();
@@ -610,8 +476,11 @@ namespace Piranha.Manager.Controllers
                 var completedWorkflows = changeRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Published);
                 var totalWorkflows = changeRequests.Count(cr => 
                     cr.Status != Piranha.Models.ChangeRequestStatus.Draft);
-                var approvalRate = totalWorkflows > 0 ? 
-                    (double)changeRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Approved) / totalWorkflows * 100 : 0;
+
+                // TODO: Review this approvalRate calculation
+                //var approvalRate = totalWorkflows > 0 ? 
+                //    (double)changeRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Approved) / totalWorkflows * 100 : 0;
+                var approvalRate = 0;
 
                 var analytics = new WorkflowAnalytics
                 {
@@ -642,13 +511,13 @@ namespace Piranha.Manager.Controllers
             if (!workflowRequests.Any()) return 0;
 
             var totalHours = workflowRequests
-                .Where(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Published || 
-                           cr.Status == Piranha.Models.ChangeRequestStatus.Approved)
+                .Where(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Published)
+                // || cr.Status == Piranha.Models.ChangeRequestStatus.Approved
                 .Sum(cr => (cr.LastModified - cr.CreatedAt).TotalHours);
 
-            var completedCount = workflowRequests.Count(cr => 
-                cr.Status == Piranha.Models.ChangeRequestStatus.Published || 
-                cr.Status == Piranha.Models.ChangeRequestStatus.Approved);
+            var completedCount = workflowRequests.Count(cr =>
+                cr.Status == Piranha.Models.ChangeRequestStatus.Published);
+                // || cr.Status == Piranha.Models.ChangeRequestStatus.Approved);
 
             return completedCount > 0 ? totalHours / completedCount : 0;
         }
@@ -700,13 +569,13 @@ namespace Piranha.Manager.Controllers
             if (!userRequests.Any()) return 0;
 
             var totalHours = userRequests
-                .Where(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Published || 
-                           cr.Status == Piranha.Models.ChangeRequestStatus.Approved)
+                .Where(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Published)
+                        // || cr.Status == Piranha.Models.ChangeRequestStatus.Approved)
                 .Sum(cr => (cr.LastModified - cr.CreatedAt).TotalHours);
 
-            var completedCount = userRequests.Count(cr => 
-                cr.Status == Piranha.Models.ChangeRequestStatus.Published || 
-                cr.Status == Piranha.Models.ChangeRequestStatus.Approved);
+            var completedCount = userRequests.Count(cr =>
+                cr.Status == Piranha.Models.ChangeRequestStatus.Published);
+                // || cr.Status == Piranha.Models.ChangeRequestStatus.Approved);
 
             return completedCount > 0 ? totalHours / completedCount : 0;
         }
@@ -718,9 +587,9 @@ namespace Piranha.Manager.Controllers
         {
             if (!changeRequests.Any()) return 0;
 
-            var completedRequests = changeRequests.Where(cr => 
-                cr.Status == Piranha.Models.ChangeRequestStatus.Published || 
-                cr.Status == Piranha.Models.ChangeRequestStatus.Approved);
+            var completedRequests = changeRequests.Where(cr =>
+                cr.Status == Piranha.Models.ChangeRequestStatus.Published);
+                // || cr.Status == Piranha.Models.ChangeRequestStatus.Approved);
 
             if (!completedRequests.Any()) return 0;
 

@@ -129,23 +129,7 @@ namespace Piranha.Manager.Services
         /// </summary>
         public async Task<ChangeRequest> ApproveAsync(Guid id, Guid userId, string comments = null)
         {
-            var changeRequest = await _api.ChangeRequests.GetByIdAsync(id);
-            if (changeRequest == null)
-                throw new ArgumentException("Change request not found");
-
-            changeRequest.Status = ChangeRequestStatus.Approved;
-            changeRequest.LastModified = DateTime.UtcNow;
-            
-            // Add approval comments to notes if provided
-            if (!string.IsNullOrEmpty(comments))
-            {
-                changeRequest.Notes = string.IsNullOrEmpty(changeRequest.Notes) 
-                    ? $"Approved: {comments}" 
-                    : $"{changeRequest.Notes}\n\nApproved: {comments}";
-            }
-
-            await _api.ChangeRequests.SaveAsync(changeRequest);
-            return changeRequest;
+            return await _api.ChangeRequests.ApproveAsync(id, userId, comments);
         }
 
         /// <summary>
@@ -153,20 +137,7 @@ namespace Piranha.Manager.Services
         /// </summary>
         public async Task<ChangeRequest> RejectAsync(Guid id, Guid userId, string reason)
         {
-            var changeRequest = await _api.ChangeRequests.GetByIdAsync(id);
-            if (changeRequest == null)
-                throw new ArgumentException("Change request not found");
-
-            changeRequest.Status = ChangeRequestStatus.Rejected;
-            changeRequest.LastModified = DateTime.UtcNow;
-            
-            // Add rejection reason to notes
-            changeRequest.Notes = string.IsNullOrEmpty(changeRequest.Notes) 
-                ? $"Rejected: {reason}" 
-                : $"{changeRequest.Notes}\n\nRejected: {reason}";
-
-            await _api.ChangeRequests.SaveAsync(changeRequest);
-            return changeRequest;
+            return await _api.ChangeRequests.RejectAsync(id, userId, reason);
         }
 
         /// <summary>
@@ -233,7 +204,6 @@ namespace Piranha.Manager.Services
 
             switch (changeRequest.Status)
             {
-                case ChangeRequestStatus.Submitted:
                 case ChangeRequestStatus.InReview:
                     actions.Add(new
                     {
