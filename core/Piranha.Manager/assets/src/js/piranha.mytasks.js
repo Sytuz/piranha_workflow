@@ -30,19 +30,22 @@ piranha.mytasks = new function () {
                     },
                     executingAction: false,
                     actionError: null
-                },
-                computed: {
+                },                computed: {
                     filteredItems: function () {
+                        // Since we're now filtering on the server side for approved/rejected,
+                        // we just return all items for client-side filtering
                         var self = this;
                         return this.items.filter(function (item) {
                             if (self.state === "all") {
                                 return true;
                             } else if (self.state === "pending") {
-                                return item.status === "Pending";
+                                return item.status === "Pending" || item.status === "Draft" || item.status === "InReview";
                             } else if (self.state === "approved") {
-                                return item.status === "Approved";
+                                // For approved/rejected, server already filtered, so show all
+                                return true;
                             } else if (self.state === "rejected") {
-                                return item.status === "Rejected";
+                                // For approved/rejected, server already filtered, so show all
+                                return true;
                             }
                             return true;
                         });
@@ -50,14 +53,19 @@ piranha.mytasks = new function () {
                 },
                 mounted: function () {
                     this.loadTasks();
-                },
-                methods: {
+                },                methods: {
                     // Load tasks from the API
                     loadTasks: function () {
                         var self = this;
                         self.loading = true;
 
-                        fetch(piranha.baseUrl + "manager/api/mytasks", {
+                        // Construct URL with filter parameter
+                        var url = piranha.baseUrl + "manager/api/mytasks";
+                        if (self.state !== "all") {
+                            url += "?filter=" + encodeURIComponent(self.state);
+                        }
+
+                        fetch(url, {
                             method: "GET",
                             headers: {
                                 "Content-Type": "application/json"
@@ -103,11 +111,37 @@ piranha.mytasks = new function () {
                             });
                             self.loading = false;
                         });
-                    },
-
-                    // Set filter status
+                    },                    // Set filter status and reload tasks
                     setStatus: function (status) {
                         this.state = status;
+                        this.loadTasks(); // Reload tasks with new filter
+                    },
+
+                    // Helper methods for task actions
+                    canEdit: function (task) {
+                        return task.availableActions && task.availableActions.includes('edit');
+                    },
+
+                    canView: function (task) {
+                        return task.availableActions && task.availableActions.includes('view');
+                    },
+
+                    canApprove: function (task) {
+                        return task.availableActions && task.availableActions.includes('approve');
+                    },
+
+                    canReject: function (task) {
+                        return task.availableActions && task.availableActions.includes('reject');
+                    },
+
+                    getEditButtonText: function (task) {
+                        // Show "Edit" for draft status, "View" for non-draft status
+                        return task.status === 'Draft' ? 'Edit' : 'View';
+                    },
+
+                    getEditButtonIcon: function (task) {
+                        // Show edit icon for draft status, view icon for non-draft status
+                        return task.status === 'Draft' ? 'fas fa-edit' : 'fas fa-eye';
                     },
 
                     // Task action methods
@@ -229,9 +263,9 @@ piranha.mytasks = new function () {
 
                     getStatusBadgeClass: function (status) {
                         switch (status) {
-                            case 'Pending':
+                            case 'InReview':
                                 return 'badge-warning';
-                            case 'Approved':
+                            case 'Published':
                                 return 'badge-success';
                             case 'Rejected':
                                 return 'badge-danger';

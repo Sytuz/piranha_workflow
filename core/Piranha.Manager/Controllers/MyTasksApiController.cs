@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Piranha.Models;
 using Piranha.Security;
+using Piranha.Services;
 using System.Security.Claims;
 
 namespace Piranha.Manager.Controllers
@@ -24,26 +25,25 @@ namespace Piranha.Manager.Controllers
     [Route("manager/api/mytasks")]
     [Authorize(Policy = Permission.ChangeRequests)]
     [ApiController]
-    [AutoValidateAntiforgeryToken]
-    public class MyTasksApiController : Controller
+    [AutoValidateAntiforgeryToken]    public class MyTasksApiController : Controller
     {
         private readonly IApi _api;
         private readonly IRoleProvider _roleProvider;
+        private readonly IChangeRequestService _changeRequestService;
         private readonly ILogger<MyTasksApiController> _logger;
 
-        public MyTasksApiController(IApi api, IRoleProvider roleProvider, ILogger<MyTasksApiController> logger)
+        public MyTasksApiController(IApi api, IRoleProvider roleProvider, IChangeRequestService changeRequestService, ILogger<MyTasksApiController> logger)
         {
             _api = api;
             _roleProvider = roleProvider;
+            _changeRequestService = changeRequestService;
             _logger = logger;
-        }
-
-        /// <summary>
+        }/// <summary>
         /// Gets the tasks assigned to the current user.
         /// </summary>
         [HttpGet]
         [Route("")]
-        public async Task<IActionResult> GetMyTasks()
+        public async Task<IActionResult> GetMyTasks([FromQuery] string filter = "all")
         {
             _logger.LogDebug("Starting GetMyTasks method");
 
@@ -56,16 +56,14 @@ namespace Piranha.Manager.Controllers
                     return Ok(new { tasks = new List<object>() });
                 }
 
-                _logger.LogDebug($"Getting tasks for user: {userId}");
+                _logger.LogDebug($"Getting tasks for user: {userId} with filter: {filter}");
 
                 // Get all workflows
                 _logger.LogDebug("Fetching all workflows");
                 var workflows = await _api.Workflows.GetAllAsync();
                 _logger.LogDebug($"Retrieved {workflows?.Count() ?? 0} workflows");
 
-                var userTasks = new List<object>();
-
-                foreach (var workflow in workflows)
+                var userTasks = new List<object>();                foreach (var workflow in workflows)
                 {
                     _logger.LogDebug($"Processing workflow: {workflow.Id} - {workflow.Title}");
 
@@ -86,18 +84,20 @@ namespace Piranha.Manager.Controllers
 
                         var isUserTask = false;
                         var availableActions = new List<string>();
+                        var isCreator = changeRequest.CreatedById.ToString() == userId;
 
-                        // Check if user created this change request
-                        if (changeRequest.CreatedById.ToString() == userId)
+                        // Check if user created this change request - creators can always see their tasks
+                        if (isCreator)
                         {
                             _logger.LogDebug($"User {userId} is creator of change request {changeRequest.Id}");
                             isUserTask = true;
-                            // Creator can view details
                             availableActions.Add("view");
                         }
 
-                        // Check if user has access to current stage
+                        // Check if user has access to current stage permissions
                         var currentStage = workflow.Stages.FirstOrDefault(s => s.Id == changeRequest.StageId);
+                        var hasStagePermissions = false;
+                        
                         if (currentStage != null)
                         {
                             _logger.LogDebug($"Current stage for change request {changeRequest.Id}: {currentStage.Id} - {currentStage.Title}");
@@ -115,13 +115,8 @@ namespace Piranha.Manager.Controllers
                                         if (User.IsInRole(role.Name))
                                         {
                                             _logger.LogDebug($"User {userId} has role {role.Name} for stage {currentStage.Id}");
+                                            hasStagePermissions = true;
                                             isUserTask = true;
-
-                                            // Add available actions - all users with stage access can view and perform actions
-                                            availableActions.Add("approve");
-                                            availableActions.Add("reject");
-                                            availableActions.Add("edit");
-                                            availableActions.Add("view");
                                             break;
                                         }
                                         else
@@ -143,6 +138,42 @@ namespace Piranha.Manager.Controllers
                         else
                         {
                             _logger.LogWarning($"Current stage {changeRequest.StageId} not found in workflow {workflow.Id}");
+                        }                        // Handle filter-specific logic for approved/rejected tasks
+                        if (filter == "approved" || filter == "rejected")
+                        {
+                            // Only show tasks where user authored approval/rejection comments
+                            var targetType = filter == "approved" ? ApprovalType.Approval : ApprovalType.Rejection;
+                            var comments = await _changeRequestService.GetCommentsAsync(changeRequest.Id);
+                            var hasUserComment = comments.Any(c => c.AuthorId.ToString() == userId && c.IsApprovalComment && c.ApprovalType == targetType);
+                            
+                            if (!hasUserComment)
+                            {
+                                _logger.LogDebug($"User {userId} has no {filter} comment for change request {changeRequest.Id}, skipping");
+                                continue;
+                            }
+                            
+                            // For approved/rejected filters, user must have authored the comment to see the task
+                            isUserTask = true;
+                            availableActions.Add("view");
+                        }
+
+                        // Determine available actions based on permissions and status
+                        if (isUserTask && hasStagePermissions)
+                        {
+                            availableActions.Add("view");
+                            
+                            // Only add approve/reject for non-draft status and users with stage permissions
+                            if (changeRequest.Status != ChangeRequestStatus.Draft)
+                            {
+                                availableActions.Add("approve");
+                                availableActions.Add("reject");
+                            }
+                        }
+                        
+                        // Add edit action for creators or users with stage permissions, but only for draft status
+                        if (isUserTask && changeRequest.Status == ChangeRequestStatus.Draft && (isCreator || hasStagePermissions))
+                        {
+                            availableActions.Add("edit");
                         }
 
                         if (isUserTask)

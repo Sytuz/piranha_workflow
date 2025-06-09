@@ -84,27 +84,31 @@
                                     <td class="align-middle">{{ task.currentStage }}</td>
                                     <td class="align-middle text-left">
                                         <span class="badge m-0" v-bind:class="{
-                            'badge-warning': task.status === 'InReview',
-                            'badge-success': task.status === 'Published',
-                            'badge-danger': task.status === 'Rejected',
-                            'badge-secondary': task.status === 'Draft'
-                        }">{{ task.status }}</span>
+                                            'badge-warning': task.status === 'InReview',
+                                            'badge-success': task.status === 'Published',
+                                            'badge-danger': task.status === 'Rejected',
+                                            'badge-secondary': task.status === 'Draft'
+                                        }">{{ task.status }}</span>
                                     </td>
-                                    <td class="align-middle">{{ formatDate(task.created) }}</td>
+                                    <td class="align-middle">{{ formatDate(task.created) }}</td>                                    
                                     <td class="align-middle text-center">
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button v-if="task.availableActions.includes('approve')"
+                                            <button v-if="canApprove(task)"
                                                 v-on:click.prevent="approveTask(task)" class="btn btn-success btn-sm"
                                                 title="Approve">
                                                 <i class="fas fa-check"></i>
                                             </button>
-                                            <button v-if="task.availableActions.includes('reject')"
+                                            <button v-if="canReject(task)"
                                                 v-on:click.prevent="rejectTask(task)" class="btn btn-danger btn-sm"
                                                 title="Reject">
                                                 <i class="fas fa-times"></i>
-                                            </button> <a v-if="task.editUrl" v-bind:href="task.editUrl" target="_blank"
-                                                class="btn btn-primary btn-sm" title="Edit Content">
-                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <a v-if="(canEdit(task) || canView(task)) && task.editUrl" 
+                                                v-bind:href="task.editUrl" 
+                                                target="_blank"
+                                                class="btn btn-primary btn-sm" 
+                                                v-bind:title="getEditButtonText(task) + ' Content'">
+                                                <i v-bind:class="getEditButtonIcon(task)"></i>
                                             </a>
                                         </div>
                                     </td>
