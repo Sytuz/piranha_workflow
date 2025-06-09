@@ -34,16 +34,15 @@ piranha.mytasks = new function () {
                 computed: {
                     filteredItems: function () {
                         var self = this;
-
                         return this.items.filter(function (item) {
                             if (self.state === "all") {
                                 return true;
                             } else if (self.state === "pending") {
-                                return item.Status === "Pending";
+                                return item.status === "Pending";
                             } else if (self.state === "approved") {
-                                return item.Status === "Approved";
+                                return item.status === "Approved";
                             } else if (self.state === "rejected") {
-                                return item.Status === "Rejected";
+                                return item.status === "Rejected";
                             }
                             return true;
                         });
@@ -58,7 +57,7 @@ piranha.mytasks = new function () {
                         var self = this;
                         self.loading = true;
 
-                        fetch(piranha.baseUrl + "manager/api/workflow-dashboard/my-tasks", {
+                        fetch(piranha.baseUrl + "manager/api/mytasks", {
                             method: "GET",
                             headers: {
                                 "Content-Type": "application/json"
@@ -71,8 +70,29 @@ piranha.mytasks = new function () {
                             return response.json();
                         })
                         .then(function (data) {
-                            // Extract the tasks array from the API response
-                            self.items = data.Tasks || [];
+
+                            // Ensure tasks is always an array
+                            var rawTasks = data.tasks;
+                            if (!Array.isArray(rawTasks)) {
+                                rawTasks = Object.values(rawTasks || {});
+                            }
+
+                            var tasks = rawTasks.map(function (t, idx) {
+                                return {
+                                    id: t.id,
+                                    contentTitle: t.contentTitle,
+                                    contentType: t.contentType,
+                                    workflowName: t.workflowName,
+                                    currentStage: t.currentStage,
+                                    status: t.status,
+                                    created: t.timestamp,
+                                    notes: t.notes,
+                                    availableActions: t.availableActions || [],
+                                    editUrl: t.editUrl
+                                };
+                            });
+
+                            self.items = tasks;
                             self.loading = false;
                         })
                         .catch(function (error) {
@@ -103,24 +123,31 @@ piranha.mytasks = new function () {
                             type: 'reject',
                             label: 'Reject Task'
                         }, task);
-                    },
-
+                    },                    
                     executeAction: function (action, task) {
-                        this.pendingAction = action;
-                        this.selectedTask = task;
+
+                        // Reset all relevant state properties
+                        this.pendingAction = null;
+                        this.selectedTask = null;
                         this.actionData = {
                             comments: '',
                             reason: ''
                         };
                         this.actionError = null;
-                        
-                        // Show the confirmation modal
-                        $('#actionConfirmationModal').modal('show');
+                        this.executingAction = false;
+
+                        // Use $nextTick to allow Vue to process the reset, then set new state
+                        var self = this;
+                        this.$nextTick(function() {
+                            self.pendingAction = action;
+                            self.selectedTask = task;
+                            $('#actionConfirmationModal').modal('show');
+                        });
                     },
 
                     confirmAction: function () {
                         var self = this;
-                        
+
                         // Validate required fields
                         if (self.pendingAction.type === 'reject' && !self.actionData.reason.trim()) {
                             self.actionError = "Rejection reason is required.";
@@ -131,9 +158,7 @@ piranha.mytasks = new function () {
                         self.actionError = null;
 
                         var endpoint = "";
-                        var payload = {
-                            userId: piranha.userId || "00000000-0000-0000-0000-000000000000"
-                        };
+                        var payload = {};
 
                         if (self.pendingAction.type === 'approve') {
                             endpoint = "approve";
@@ -145,7 +170,7 @@ piranha.mytasks = new function () {
                             payload.reason = self.actionData.reason;
                         }
 
-                        fetch(piranha.baseUrl + "manager/api/changerequest/" + self.selectedTask.Id + "/" + endpoint, {
+                        fetch(piranha.baseUrl + "manager/api/mytasks/" + self.selectedTask.id + "/" + endpoint, {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
@@ -163,27 +188,26 @@ piranha.mytasks = new function () {
                         .then(function (result) {
                             self.executingAction = false;
                             $('#actionConfirmationModal').modal('hide');
-                            
+
                             // Show success notification
                             piranha.notifications.push({
                                 type: 'success',
                                 body: 'Task ' + self.pendingAction.type + 'd successfully'
                             });
-                            
+
                             // Refresh the task list
                             self.loadTasks();
                         })
                         .catch(function (error) {
                             self.executingAction = false;
                             self.actionError = error.message || "Failed to execute action.";
-                            
+
                             piranha.notifications.push({
                                 type: 'error',
                                 body: self.actionError
                             });
                         });
-                    },
-
+                    },                    
                     cancelAction: function () {
                         this.pendingAction = null;
                         this.selectedTask = null;
@@ -192,6 +216,7 @@ piranha.mytasks = new function () {
                             reason: ''
                         };
                         this.actionError = null;
+                        this.executingAction = false;
                         $('#actionConfirmationModal').modal('hide');
                     },
 

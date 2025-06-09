@@ -36,6 +36,8 @@
     .badge {
         font-size: 0.75rem;
         padding: 0.375rem 0.75rem;
+        text-align: left !important;
+        display: inline-block;
         
         &.badge-warning {
             background-color: #ffc107;
@@ -77,6 +79,16 @@
             padding: 1rem 0.75rem;
             border-top: 1px solid #dee2e6;
             vertical-align: middle;
+            
+            // Force status column alignment
+            &.text-left {
+                text-align: left !important;
+                
+                .badge {
+                    float: left;
+                    margin-right: auto;
+                }
+            }
             
             strong {
                 font-weight: 600;
@@ -137,19 +149,15 @@
         }
     }
     
-    // Loading state
-    &:not(.ready) {
-        .app {
-            opacity: 0.6;
-            pointer-events: none;
-        }
+    // Loading state - target .app directly instead of expecting ready class on #mytasks
+    .app:not(.ready) {
+        opacity: 0.6;
+        pointer-events: none;
     }
     
-    &.ready {
-        .app {
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
+    .app.ready {
+        opacity: 1;
+        transition: opacity 0.3s ease;
     }
 }
 

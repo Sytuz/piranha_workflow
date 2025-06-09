@@ -168,7 +168,7 @@ namespace Piranha.Manager.Controllers
         /// Gets tasks assigned to or created by the current user based on their roles and workflow stage access.
         /// </summary>
         /// <returns>The user's tasks</returns>
-        [Route("my-tasks")]
+/*         [Route("my-tasks")]
         [HttpGet]
         [Authorize(Policy = Permission.ChangeRequests)]
         public async Task<IActionResult> GetMyTasks()
@@ -293,7 +293,7 @@ namespace Piranha.Manager.Controllers
                 return StatusCode(500, new { message = "Unable to load user tasks", error = ex.Message });
             }
         }
-
+ */
         /// <summary>
         /// Helper method to get action text from change request status.
         /// </summary>

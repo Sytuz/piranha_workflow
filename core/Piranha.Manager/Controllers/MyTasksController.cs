@@ -8,6 +8,10 @@
  *
  */
 
+// DISABLED: This controller conflicts with the Razor Page implementation
+// Delete this file or comment out the entire class to use the Razor Page instead
+
+/*
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha.Manager.Models;
@@ -40,3 +44,4 @@ namespace Piranha.Manager.Controllers
         }
     }
 }
+*/
