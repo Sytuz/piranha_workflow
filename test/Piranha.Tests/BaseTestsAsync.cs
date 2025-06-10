@@ -84,6 +84,8 @@ public abstract class BaseTestsAsync : IAsyncLifetime
             new WorkflowStageRelationRepository(db),
             new WorkflowStageRoleRepository(db),
             new ChangeRequestRepository(db),
+            new ChangeRequestCommentRepository(db),
+            new ChangeRequestTransitionRepository(db),
 
             cache: _cache,
             storage: _storage,

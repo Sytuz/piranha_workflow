@@ -101,7 +101,9 @@ public class UI : BaseTests
             new WorkflowStageRepository(db),
             new WorkflowStageRelationRepository(db),
             new WorkflowStageRoleRepository(db),
-            new ChangeRequestRepository(db)
+            new ChangeRequestRepository(db),
+            new ChangeRequestCommentRepository(db),
+            new ChangeRequestTransitionRepository(db)
         );
     }
 }
