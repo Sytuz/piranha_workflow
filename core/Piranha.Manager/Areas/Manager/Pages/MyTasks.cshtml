@@ -59,14 +59,13 @@
                     <table v-else class="table table-borderless">
                         <thead>
                             <tr>
-                                <th class="w-30">Content</th>
+                                <th class="w-25">Content</th>
                                 <th class="w-20">Workflow</th>
                                 <th class="w-15">Current Stage</th>
                                 <th class="w-10">Status</th>
                                 <th class="w-15">Created</th>
-                                <th class="w-10 text-center">Actions</th>
-                                <th class="w-10">Transition Path</th>
-                                <th class="w-10">Acceptance Time</th>
+                                <th class="w-15 text-center">Actions</th>
+                                <th class="w-15">Transition Path</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -94,41 +93,41 @@
                                     </td>
                                     <td class="align-middle">{{ formatDate(task.created) }}</td>                                    
                                     <td class="align-middle text-center">
-                                        <div class="btn-group btn-group-sm" role="group">
+                                        <div class="btn-group btn-group-sm" role="group" style="gap: 4px;">
                                             <button v-if="canApprove(task)"
-                                                v-on:click.prevent="approveTask(task)" class="btn btn-success btn-sm"
+                                                v-on:click.prevent="approveTask(task)" class="btn btn-success btn-sm px-3"
                                                 title="Approve">
                                                 <i class="fas fa-check"></i>
                                             </button>
                                             <button v-if="canReject(task)"
-                                                v-on:click.prevent="rejectTask(task)" class="btn btn-danger btn-sm"
+                                                v-on:click.prevent="rejectTask(task)" class="btn btn-danger btn-sm px-3"
                                                 title="Reject">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                             <a v-if="(canEdit(task) || canView(task)) && task.editUrl" 
                                                 v-bind:href="task.editUrl" 
                                                 target="_blank"
-                                                class="btn btn-primary btn-sm" 
+                                                class="btn btn-primary btn-sm px-3" 
                                                 v-bind:title="getEditButtonText(task) + ' Content'">
                                                 <i v-bind:class="getEditButtonIcon(task)"></i>
                                             </a>
                                         </div>
                                     </td>
                                     <td class="align-middle">
-                                    <span v-if="task.transitionPath" v-bind:title="getTransitionPath(task)">
-                                        <i class="fas fa-route"></i>
-                                        <span class="ml-1">Path</span>
-                                    </span>
-                                </td>
-                                <td class="align-middle">
-                                    <span v-if="task.acceptanceTime != null">
-                                        <i class="fas fa-clock"></i>
-                                        <span class="ml-1">{{ getAcceptanceTime(task) }}</span>
-                                    </span>
-                                </td>
+                                        <button v-if="task.transitionPath" 
+                                                v-on:click.prevent="showTransitionHistory(task)"
+                                                class="btn btn-link p-0 text-info" 
+                                                v-bind:title="'View transition history: ' + getTransitionPath(task)">
+                                            <i class="fas fa-route"></i>
+                                            <span class="ml-1">View Path</span>
+                                        </button>
+                                        <span v-else class="text-muted">
+                                            <i class="fas fa-minus"></i> No transitions
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr v-if="task.notes" class="task-notes">
-                                    <td colspan="8" class="pt-0">
+                                    <td colspan="7" class="pt-0">
                                         <small class="text-muted">
                                             <strong>Notes:</strong> {{ task.notes }}
                                         </small>
@@ -144,6 +143,7 @@
 
     @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_ApproveChangeRequestModal.cshtml")
     @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_RejectChangeRequestModal.cshtml")
+    @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_TransitionHistoryModal.cshtml")
 </div>
 
 

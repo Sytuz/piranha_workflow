@@ -144,18 +144,23 @@ namespace Piranha.Manager.Controllers
                         }                        // Handle filter-specific logic for approved/rejected tasks
                         if (filter == "approved" || filter == "rejected")
                         {
-                            // Only show tasks where user authored approval/rejection comments
+                            // Check if user performed the approval/rejection action
+                            var transitions = await _changeRequestService.GetTransitionsAsync(changeRequest.Id);
+                            var targetActionType = filter == "approved" ? "Approve" : "Reject";
+                            var hasUserAction = transitions.Any(t => t.UserId.ToString() == userId && t.ActionType == targetActionType);
+                            
+                            // Also check approval/rejection comments as backup
                             var targetType = filter == "approved" ? ApprovalType.Approval : ApprovalType.Rejection;
                             var comments = await _changeRequestService.GetCommentsAsync(changeRequest.Id);
                             var hasUserComment = comments.Any(c => c.AuthorId.ToString() == userId && c.IsApprovalComment && c.ApprovalType == targetType);
                             
-                            if (!hasUserComment)
+                            if (!hasUserAction && !hasUserComment)
                             {
-                                _logger.LogDebug($"User {userId} has no {filter} comment for change request {changeRequest.Id}, skipping");
+                                _logger.LogDebug($"User {userId} has no {filter} action or comment for change request {changeRequest.Id}, skipping");
                                 continue;
                             }
                             
-                            // For approved/rejected filters, user must have authored the comment to see the task
+                            // For approved/rejected filters, user must have performed the action to see the task
                             isUserTask = true;
                             availableActions.Add("view");
                         }
@@ -275,8 +280,9 @@ namespace Piranha.Manager.Controllers
 
                 _logger.LogDebug($"Found {userTasks.Count} tasks for user {userId}");
 
-                var orderedTasks = userTasks.OrderByDescending(t => ((DateTime)((dynamic)t).timestamp)).ToList();
-                _logger.LogDebug("Tasks ordered by timestamp (descending)");
+                // Sort by creation date - oldest first (ascending order)
+                var orderedTasks = userTasks.OrderBy(t => ((DateTime)((dynamic)t).timestamp)).ToList();
+                _logger.LogDebug("Tasks ordered by timestamp (ascending - oldest first)");
 
                 return Ok(new { tasks = orderedTasks });
             }
@@ -389,6 +395,64 @@ namespace Piranha.Manager.Controllers
             {
                 _logger.LogError(ex, $"Error rejecting change request {id}");
                 return StatusCode(500, new { error = "An error occurred while rejecting the change request." });
+            }
+        }
+
+        /// <summary>
+        /// Get transition history for a change request
+        /// </summary>
+        [HttpGet]
+        [Route("changerequest/{id:guid}/transitions")]
+        public async Task<IActionResult> GetTransitionHistory(Guid id)
+        {
+            try
+            {
+                var changeRequest = await _api.ChangeRequests.GetByIdAsync(id);
+                if (changeRequest == null)
+                    return NotFound();
+
+                var transitions = await _changeRequestService.GetTransitionsAsync(id);
+                var transitionData = new List<object>();
+
+                foreach (var transition in transitions.OrderBy(t => t.Timestamp))
+                {
+                    // Get stage information
+                    var fromStage = await _stageService.GetByIdAsync(transition.FromStageId);
+                    var toStage = await _stageService.GetByIdAsync(transition.ToStageId);
+
+                    // Get user name (simplified - you might want to implement proper user resolution)
+                    var userName = $"User {transition.UserId}";
+
+                    // Get comment content if available
+                    string comments = null;
+                    if (transition.CommentId.HasValue)
+                    {
+                        var allComments = await _changeRequestService.GetCommentsAsync(id);
+                        var comment = allComments.FirstOrDefault(c => c.Id == transition.CommentId.Value);
+                        comments = comment?.Content;
+                    }
+
+                    transitionData.Add(new
+                    {
+                        id = transition.Id,
+                        timestamp = transition.Timestamp,
+                        actionType = transition.ActionType,
+                        fromStageId = transition.FromStageId,
+                        fromStageTitle = fromStage?.Title ?? "Unknown",
+                        toStageId = transition.ToStageId,
+                        toStageTitle = toStage?.Title ?? "Unknown",
+                        userId = transition.UserId,
+                        userName = userName,
+                        comments = comments
+                    });
+                }
+
+                return Ok(new { transitions = transitionData });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting transition history for change request {id}");
+                return StatusCode(500, new { error = "An error occurred while retrieving transition history." });
             }
         }
 

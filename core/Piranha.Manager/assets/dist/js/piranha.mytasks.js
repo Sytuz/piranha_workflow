@@ -40,7 +40,11 @@ piranha.mytasks = new function () {
                     // New data properties for rejection modal
                     rejectReason: '',
                     rejectReasonError: null,
-                    submittingRejectChangeRequest: false
+                    submittingRejectChangeRequest: false,
+                    // Transition history modal
+                    showingTransitionHistory: false,
+                    selectedTaskForHistory: null,
+                    transitionHistoryData: []
                 },                computed: {
                     filteredItems: function () {
                         // Since we're now filtering on the server side for approved/rejected,
@@ -113,7 +117,10 @@ piranha.mytasks = new function () {
                                 };
                             });
 
-                            self.items = tasks;
+                            // Sort by creation date - oldest first
+                            self.items = tasks.sort(function(a, b) {
+                                return new Date(a.created) - new Date(b.created);
+                            });
                             self.loading = false;
                         })
                         .catch(function (error) {
@@ -212,6 +219,33 @@ piranha.mytasks = new function () {
                         self.rejectReasonError = null;
                         self.submittingRejectChangeRequest = false;
                         $('#rejectChangeRequestModal').modal('show');
+                    },
+                    
+                    showTransitionHistory: function (task) {
+                        var self = this;
+                        self.selectedTaskForHistory = task;
+                        self.showingTransitionHistory = true;
+                        
+                        // Load transition history for this task
+                        fetch(piranha.baseUrl + "manager/api/changerequest/" + task.id + "/transitions", {
+                            method: "GET",
+                            headers: { "Content-Type": "application/json" }
+                        })
+                        .then(function (response) {
+                            if (!response.ok) throw new Error("Failed to load transition history");
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            self.transitionHistoryData = data.transitions || [];
+                            $('#transitionHistoryModal').modal('show');
+                        })
+                        .catch(function (error) {
+                            console.error("Error loading transition history:", error);
+                            piranha.notifications.push({ 
+                                type: 'error', 
+                                body: "Failed to load transition history" 
+                            });
+                        });
                     },                    
                     executeAction: function (action, task) {
 
@@ -406,19 +440,22 @@ piranha.mytasks = new function () {
                         this.loadTasks();
                     },
 
-                    // Show transition path as tooltip or expandable row
-                    getTransitionPath: function(task) {
-                        if (task.transitionPath) {
-                            // Replace stage IDs with arrows for now; ideally, resolve to stage names
-                            return task.transitionPath.replace(/→/g, ' → ');
-                        }
-                        return 'No path';
+                    // Format date helper
+                    formatDate: function(dateString) {
+                        if (!dateString) return 'N/A';
+                        var date = new Date(dateString);
+                        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     },
+                    
+                    // Get transition path helper
+                    getTransitionPath: function(task) {
+                        return task.transitionPath || 'No transitions yet';
+                    },
+                    
+                    // Get acceptance time helper (now unused but keeping for compatibility)
                     getAcceptanceTime: function(task) {
-                        if (task.acceptanceTime != null) {
-                            return task.acceptanceTime.toFixed(2) + ' hrs';
-                        }
-                        return 'N/A';
+                        if (!task.acceptanceTime) return 'N/A';
+                        return Math.round(task.acceptanceTime) + ' hours';
                     },
 
                     // Initialize GoJS diagram for approval modal
