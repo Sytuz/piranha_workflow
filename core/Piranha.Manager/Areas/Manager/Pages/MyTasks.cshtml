@@ -60,12 +60,12 @@
                         <thead>
                             <tr>
                                 <th class="w-25">Content</th>
-                                <th class="w-20">Workflow</th>
-                                <th class="w-15">Current Stage</th>
+                                <th class="w-13">Workflow</th>
+                                <th class="w-12">Current Stage</th>
                                 <th class="w-10">Status</th>
-                                <th class="w-15">Created</th>
+                                <th class="w-12">Created</th>
                                 <th class="w-15 text-center">Actions</th>
-                                <th class="w-15">Transition Path</th>
+                                <th class="w-18 text-center">Transition Path</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -113,7 +113,7 @@
                                             </a>
                                         </div>
                                     </td>
-                                    <td class="align-middle">
+                                    <td class="align-middle text-center">
                                         <button v-if="task.transitionPath" 
                                                 v-on:click.prevent="showTransitionHistory(task)"
                                                 class="btn btn-link p-0 text-info" 

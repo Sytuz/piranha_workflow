@@ -232,7 +232,15 @@ namespace Piranha.Services
             var targetStage = workflow.Stages?.FirstOrDefault(s => s.Id == stageId);
             if (targetStage == null)
             {
-                throw new ValidationException("Target stage does not belong to the workflow");
+                // Enhanced debug logging to identify the issue
+                var workflowStageIds = workflow.Stages?.Select(s => s.Id.ToString()).ToArray() ?? new string[0];
+                var debugMessage = $"Target stage does not belong to the workflow. " +
+                    $"Target stage ID: {stageId}, " +
+                    $"Workflow ID: {workflow.Id}, " +
+                    $"Available stage IDs in workflow: [{string.Join(", ", workflowStageIds)}]";
+                
+                Console.WriteLine($"[DEBUG] {debugMessage}");
+                throw new ValidationException(debugMessage);
             }
 
             // Validate that the transition is allowed

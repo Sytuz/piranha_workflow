@@ -227,7 +227,7 @@ piranha.mytasks = new function () {
                         self.showingTransitionHistory = true;
                         
                         // Load transition history for this task
-                        fetch(piranha.baseUrl + "manager/api/changerequest/" + task.id + "/transitions", {
+                        fetch(piranha.baseUrl + "manager/api/mytasks/changerequest/" + task.id + "/transitions", {
                             method: "GET",
                             headers: { "Content-Type": "application/json" }
                         })

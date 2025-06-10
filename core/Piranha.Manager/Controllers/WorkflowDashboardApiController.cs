@@ -424,26 +424,22 @@ namespace Piranha.Manager.Controllers
                 }
                 double avgAcceptanceTime = acceptanceTimes.Count > 0 ? acceptanceTimes.Average() : 0;
 
-                // Generate daily stats for the specified period using actual change request data
+                // Generate daily stats for the specified period with improved date range logic
                 var dailyStats = new List<WorkflowDailyStats>();
                 for (int i = days - 1; i >= 0; i--)
                 {
                     var date = DateTime.Now.Date.AddDays(-i);
+                    var nextDate = date.AddDays(1);
+                    
                     dailyStats.Add(new WorkflowDailyStats
                     {
                         Date = date,
-                        ItemsCreated = changeRequests.Count(cr => cr.CreatedAt.Date == date),
-                        // TODO: Adapt this to use other entities to get approval data
-                        //ItemsApproved = changeRequests.Count(cr => 
-                        //    cr.Status == Piranha.Models.ChangeRequestStatus.Approved && 
-                        //    cr.LastModified.Date == date),
-                        ItemsApproved = 0,
-                        ItemsRejected = changeRequests.Count(cr => 
-                            cr.Status == Piranha.Models.ChangeRequestStatus.Rejected && 
-                            cr.LastModified.Date == date),
+                        ItemsCreated = changeRequests.Count(cr => cr.CreatedAt >= date && cr.CreatedAt < nextDate),
+                        ItemsApproved = allTransitions.Count(t => t.ActionType == "Approve" && t.Timestamp >= date && t.Timestamp < nextDate),
+                        ItemsRejected = allTransitions.Count(t => t.ActionType == "Reject" && t.Timestamp >= date && t.Timestamp < nextDate),
                         ItemsCompleted = changeRequests.Count(cr => 
                             cr.Status == Piranha.Models.ChangeRequestStatus.Published && 
-                            cr.LastModified.Date == date)
+                            cr.LastModified >= date && cr.LastModified < nextDate)
                     });
                 }
 
@@ -477,26 +473,30 @@ namespace Piranha.Manager.Controllers
                         AverageProcessingTimeHours = CalculateUserAverageProcessingTime(g)
                     }).ToList();
 
-                // Generate content type distribution based on change requests
-                var contentTypeStats = new List<ContentTypeDistribution>
+                // Generate content type distribution based on actual content types
+                var contentTypeGroups = changeRequests
+                    .GroupBy(cr => _contentTypeResolutionService.GetContentTypeByIdAsync(cr.ContentId).Result ?? "Unknown")
+                    .ToList();
+
+                var contentTypeStats = new List<ContentTypeDistribution>();
+                var totalCount = changeRequests.Count();
+
+                foreach (var group in contentTypeGroups)
                 {
-                    new ContentTypeDistribution
+                    var count = group.Count();
+                    contentTypeStats.Add(new ContentTypeDistribution
                     {
-                        ContentType = "Change Requests",
-                        Count = changeRequests.Count(),
-                        Percentage = 100.0,
-                        AverageProcessingTimeHours = CalculateOverallAverageProcessingTime(changeRequests)
-                    }
-                };
+                        ContentType = group.Key,
+                        Count = count,
+                        Percentage = totalCount > 0 ? (double)count / totalCount * 100 : 0,
+                        AverageProcessingTimeHours = CalculateUserAverageProcessingTime(group)
+                    });
+                }
 
                 var completedWorkflows = changeRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Published);
-                var totalWorkflows = changeRequests.Count(cr => 
-                    cr.Status != Piranha.Models.ChangeRequestStatus.Draft);
-
-                // TODO: Review this approvalRate calculation
-                //var approvalRate = totalWorkflows > 0 ? 
-                //    (double)changeRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Approved) / totalWorkflows * 100 : 0;
-                var approvalRate = 0;
+                // Calculate approval rate as accepted/(accepted+rejected) with zero division protection
+                var approvalRate = (acceptedCount + rejectedCount) > 0 ? 
+                    (double)acceptedCount / (acceptedCount + rejectedCount) * 100 : 0;
 
                 var analytics = new WorkflowAnalytics
                 {
