@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Piranha.Models;
 using Piranha.Security;
 using Piranha.Services;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace Piranha.Manager.Controllers
@@ -30,13 +31,15 @@ namespace Piranha.Manager.Controllers
         private readonly IApi _api;
         private readonly IRoleProvider _roleProvider;
         private readonly IChangeRequestService _changeRequestService;
+        private readonly IWorkflowStageService _stageService;
         private readonly ILogger<MyTasksApiController> _logger;
 
-        public MyTasksApiController(IApi api, IRoleProvider roleProvider, IChangeRequestService changeRequestService, ILogger<MyTasksApiController> logger)
+        public MyTasksApiController(IApi api, IRoleProvider roleProvider, IChangeRequestService changeRequestService, IWorkflowStageService stageService, ILogger<MyTasksApiController> logger)
         {
             _api = api;
             _roleProvider = roleProvider;
             _changeRequestService = changeRequestService;
+            _stageService = stageService;
             _logger = logger;
         }/// <summary>
         /// Gets the tasks assigned to the current user.
@@ -225,6 +228,23 @@ namespace Piranha.Manager.Controllers
                                 editUrl = "";
                             }
 
+                            // Fetch transition path for this change request
+                            var transitions = await _changeRequestService.GetTransitionsAsync(changeRequest.Id);
+                            // Compose a human-readable path string: Stage1 → Stage2 → ...
+                            var stageIds = transitions.SelectMany(t => new[] { t.FromStageId, t.ToStageId }).Distinct().ToList();
+                            var stageTitles = new Dictionary<Guid, string>();
+                            foreach (var stageId in stageIds)
+                            {
+                                var stage = await _stageService.GetByIdAsync(stageId);
+                                stageTitles[stageId] = stage?.Title ?? "Unknown";
+                            }
+                            var transitionPath = string.Join(" → ", transitions.OrderBy(t => t.Timestamp)
+                                .Select(t => (stageTitles.TryGetValue(t.FromStageId, out var fromTitle) ? fromTitle : "Unknown") + "→" + (stageTitles.TryGetValue(t.ToStageId, out var toTitle) ? toTitle : "Unknown")));
+                            // Calculate acceptance time (if available)
+                            var submitted = transitions.FirstOrDefault(t => t.ActionType == "Submit");
+                            var approved = transitions.FirstOrDefault(t => t.ActionType == "Approve");
+                            TimeSpan? acceptanceTime = (submitted != null && approved != null) ? approved.Timestamp - submitted.Timestamp : (TimeSpan?)null;
+
                             var task = new
                             {
                                 id = changeRequest.Id,
@@ -238,7 +258,9 @@ namespace Piranha.Manager.Controllers
                                 user = changeRequest.CreatedById.ToString() == userId ? "You" : "Other User",
                                 notes = !string.IsNullOrWhiteSpace(changeRequest.Notes) ? changeRequest.Notes : null,
                                 availableActions = availableActions.Distinct().ToList(),
-                                editUrl = editUrl
+                                editUrl = editUrl,
+                                transitionPath = transitionPath,
+                                acceptanceTime = acceptanceTime?.TotalHours
                             };
 
                             userTasks.Add(task);
@@ -304,9 +326,14 @@ namespace Piranha.Manager.Controllers
                 if (!canApprove)
                     return Forbid();
 
-                await _api.ChangeRequests.ApproveAsync(id, Guid.Parse(userId), model?.Comments);
+                // Pass nextStageId if provided
+                await _api.ChangeRequests.ApproveAsync(id, Guid.Parse(userId), model?.Comments, model?.NextStageId);
 
                 return Ok(new { success = true, message = "Change request approved successfully" });
+            }
+            catch (ValidationException vex)
+            {
+                return BadRequest(new { error = vex.Message });
             }
             catch (Exception ex)
             {
@@ -368,6 +395,7 @@ namespace Piranha.Manager.Controllers
         public class ApproveRequestModel
         {
             public string Comments { get; set; }
+            public Guid? NextStageId { get; set; } // Optional next stage selection
         }
 
         public class RejectRequestModel

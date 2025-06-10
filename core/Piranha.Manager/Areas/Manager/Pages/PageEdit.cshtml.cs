@@ -9,12 +9,14 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Piranha.Manager.Services;
+using Piranha.Models;
 
 namespace Piranha.Manager.Models
 {
@@ -38,10 +40,15 @@ namespace Piranha.Manager.Models
         /// </summary>
         public Guid? WorkflowId { get; private set; }
 
+        /// <summary>
+        /// The transition history for the current change request (if any).
+        /// </summary>
+        public IEnumerable<Piranha.Manager.Models.ChangeRequestTransitionViewModel> ChangeRequestTransitions { get; set; }
+
         public async Task OnGetAsync()
         {
             // Get current user ID
-            UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
             // Get workflow
             try
@@ -55,6 +62,10 @@ namespace Piranha.Manager.Models
                 // If there's an error getting workflows, set to null
                 WorkflowId = null;
             }
+
+            // TODO: Load transition history for the current change request if available
+            // For now, assign an empty list of view models
+            ChangeRequestTransitions = new List<Piranha.Manager.Models.ChangeRequestTransitionViewModel>();
         }
     }
 }

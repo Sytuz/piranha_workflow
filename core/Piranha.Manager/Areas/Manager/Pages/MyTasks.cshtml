@@ -65,6 +65,8 @@
                                 <th class="w-10">Status</th>
                                 <th class="w-15">Created</th>
                                 <th class="w-10 text-center">Actions</th>
+                                <th class="w-10">Transition Path</th>
+                                <th class="w-10">Acceptance Time</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -112,9 +114,21 @@
                                             </a>
                                         </div>
                                     </td>
+                                    <td class="align-middle">
+                                    <span v-if="task.transitionPath" v-bind:title="getTransitionPath(task)">
+                                        <i class="fas fa-route"></i>
+                                        <span class="ml-1">Path</span>
+                                    </span>
+                                </td>
+                                <td class="align-middle">
+                                    <span v-if="task.acceptanceTime != null">
+                                        <i class="fas fa-clock"></i>
+                                        <span class="ml-1">{{ getAcceptanceTime(task) }}</span>
+                                    </span>
+                                </td>
                                 </tr>
                                 <tr v-if="task.notes" class="task-notes">
-                                    <td colspan="6" class="pt-0">
+                                    <td colspan="8" class="pt-0">
                                         <small class="text-muted">
                                             <strong>Notes:</strong> {{ task.notes }}
                                         </small>
@@ -128,55 +142,8 @@
         </div>
     </div>
 
-    <!-- Task Action Confirmation Modal -->
-    <div id="actionConfirmationModal" class="modal fade" tabindex="-1" role="dialog"
-        aria-labelledby="actionConfirmationModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="actionConfirmationModalLabel">
-                        {{ pendingAction ? pendingAction.label : '' }}
-                    </h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div v-if="pendingAction && pendingAction.type === 'approve'">
-                        <p>Are you sure you want to approve this task?</p>
-                        <div class="form-group">
-                            <label for="approvalComments">Approval Comments (Optional)</label>
-                            <textarea id="approvalComments" v-model="actionData.comments" class="form-control" rows="3"
-                                placeholder="Add any comments about the approval..."></textarea>
-                        </div>
-                    </div>
-                    <div v-else-if="pendingAction && pendingAction.type === 'reject'">
-                        <p>Are you sure you want to reject this task?</p>
-                        <div class="form-group">
-                            <label for="rejectionReason">Rejection Reason *</label>
-                            <textarea id="rejectionReason" v-model="actionData.reason" class="form-control" rows="3"
-                                placeholder="Please provide a reason for rejecting this task..." required></textarea>
-                            <div v-if="actionError" class="invalid-feedback d-block">{{ actionError }}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" v-on:click="cancelAction">Cancel</button>
-                    <button type="button" v-on:click="confirmAction" class="btn"
-                        v-bind:class="{ 'btn-success': pendingAction && pendingAction.type === 'approve', 'btn-danger': pendingAction && pendingAction.type === 'reject' }"
-                        v-bind:disabled="executingAction">
-                        <span v-if="executingAction" class="spinner-border spinner-border-sm me-1" role="status"></span>
-                        <i v-if="!executingAction && pendingAction && pendingAction.type === 'approve'"
-                            class="fas fa-check"></i>
-                        <i v-if="!executingAction && pendingAction && pendingAction.type === 'reject'"
-                            class="fas fa-times"></i>
-                        {{ pendingAction ? pendingAction.label : '' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_ApproveChangeRequestModal.cshtml")
+    @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_RejectChangeRequestModal.cshtml")
 </div>
 
 
-                   

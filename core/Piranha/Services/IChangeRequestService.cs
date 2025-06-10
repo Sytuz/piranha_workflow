@@ -108,13 +108,14 @@ namespace Piranha.Services
         Task<bool> CanTransitionAsync(Guid userId, Guid changeRequestId, Guid targetStageId);
 
         /// <summary>
-        /// Approves a change request.
+        /// Approves a change request, optionally specifying the next stage.
         /// </summary>
         /// <param name="id">The change request id</param>
         /// <param name="userId">The user performing the approval</param>
         /// <param name="comments">Optional approval comments</param>
+        /// <param name="nextStageId">Optional next stage id (if multiple transitions are possible)</param>
         /// <returns>The updated change request</returns>
-        Task<ChangeRequest> ApproveAsync(Guid id, Guid userId, string comments = null);
+        Task<ChangeRequest> ApproveAsync(Guid id, Guid userId, string comments = null, Guid? nextStageId = null);
 
         /// <summary>
         /// Rejects a change request.
@@ -178,5 +179,12 @@ namespace Piranha.Services
         /// </summary>
         /// <param name="commentId">The comment id</param>
         Task DeleteCommentAsync(Guid commentId);
+
+        /// <summary>
+        /// Gets the transition history for a change request.
+        /// </summary>
+        /// <param name="changeRequestId">The change request id</param>
+        /// <returns>The transition history</returns>
+        Task<IEnumerable<ChangeRequestTransition>> GetTransitionsAsync(Guid changeRequestId);
     }
 }

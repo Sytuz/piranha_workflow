@@ -1,4 +1,3 @@
-
 namespace Piranha.Manager.Models;
 
 /// <summary>
@@ -283,11 +282,6 @@ public class WorkflowAnalytics
     public IList<WorkflowPerformanceMetric> WorkflowMetrics { get; set; } = new List<WorkflowPerformanceMetric>();
 
     /// <summary>
-    /// Gets/sets the stage bottleneck analysis.
-    /// </summary>
-    public IList<WorkflowStageBottleneck> Bottlenecks { get; set; } = new List<WorkflowStageBottleneck>();
-
-    /// <summary>
     /// Gets/sets the user productivity statistics.
     /// </summary>
     public IList<UserProductivityStat> UserStats { get; set; } = new List<UserProductivityStat>();
@@ -303,7 +297,7 @@ public class WorkflowAnalytics
     public double AverageProcessingTimeHours { get; set; }
 
     /// <summary>
-    /// Gets/sets the total number of completed workflows in the period.
+    /// Gets/sets the total number of completed workflow cycles in the period.
     /// </summary>
     public int CompletedWorkflows { get; set; }
 
@@ -311,6 +305,21 @@ public class WorkflowAnalytics
     /// Gets/sets the approval rate percentage.
     /// </summary>
     public double ApprovalRate { get; set; }
+
+    /// <summary>
+    /// Gets/sets the total number of accepted workflows.
+    /// </summary>
+    public int AcceptedCount { get; set; }
+
+    /// <summary>
+    /// Gets/sets the total number of rejected workflows.
+    /// </summary>
+    public int RejectedCount { get; set; }
+
+    /// <summary>
+    /// Gets/sets the average acceptance time in hours.
+    /// </summary>
+    public double AverageAcceptanceTimeHours { get; set; }
 }
 
 /// <summary>
@@ -378,42 +387,6 @@ public class WorkflowPerformanceMetric
     /// Gets/sets the number of active items.
     /// </summary>
     public int ActiveItems { get; set; }
-}
-
-/// <summary>
-/// Bottleneck analysis for workflow stages.
-/// </summary>
-public class WorkflowStageBottleneck
-{
-    /// <summary>
-    /// Gets/sets the stage identifier.
-    /// </summary>
-    public Guid StageId { get; set; }
-
-    /// <summary>
-    /// Gets/sets the stage name.
-    /// </summary>
-    public string StageName { get; set; }
-
-    /// <summary>
-    /// Gets/sets the workflow name.
-    /// </summary>
-    public string WorkflowName { get; set; }
-
-    /// <summary>
-    /// Gets/sets the average time spent in this stage (in hours).
-    /// </summary>
-    public double AverageTimeInStageHours { get; set; }
-
-    /// <summary>
-    /// Gets/sets the current backlog count.
-    /// </summary>
-    public int BacklogCount { get; set; }
-
-    /// <summary>
-    /// Gets/sets the bottleneck severity (1-5, where 5 is most severe).
-    /// </summary>
-    public int BottleneckSeverity { get; set; }
 }
 
 /// <summary>

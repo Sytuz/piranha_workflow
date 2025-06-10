@@ -443,11 +443,6 @@ piranha.workflowdashboard = new function () {
                         return (count / this.maxStageCount) * 100;
                     },
 
-                    getBottleneckCount: function () {
-                        if (!this.analytics || !this.analytics.bottlenecks) return 0;
-                        return this.analytics.bottlenecks.filter(b => b.bottleneckSeverity >= 2).length;
-                    },
-
                     getCompletionRateBadgeClass: function (rate) {
                         if (rate >= 90) return 'badge-success';
                         if (rate >= 70) return 'badge-warning';

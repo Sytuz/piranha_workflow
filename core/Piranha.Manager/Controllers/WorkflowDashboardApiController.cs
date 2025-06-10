@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
 using Piranha.Security;
+using Piranha.Services;
+using Piranha.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -395,6 +397,33 @@ namespace Piranha.Manager.Controllers
                 var changeRequests = await _api.ChangeRequests.GetAllAsync();
                 var startDate = DateTime.Now.Date.AddDays(-days);
 
+                // Gather all transitions for all change requests
+                var allTransitions = new List<Piranha.Models.ChangeRequestTransition>();
+                foreach (var cr in changeRequests)
+                {
+                    var transitions = await _api.ChangeRequests.GetTransitionsAsync(cr.Id);
+                    allTransitions.AddRange(transitions);
+                }
+
+                // Count accepted (approved) and rejected requests in the period
+                var acceptedTransitions = allTransitions.Where(t => t.ActionType == "Approve" && t.Timestamp >= startDate).ToList();
+                var rejectedTransitions = allTransitions.Where(t => t.ActionType == "Reject" && t.Timestamp >= startDate).ToList();
+                int acceptedCount = acceptedTransitions.Count;
+                int rejectedCount = rejectedTransitions.Count;
+
+                // Calculate average acceptance time (from creation to first Approve transition)
+                var acceptanceTimes = new List<double>();
+                foreach (var cr in changeRequests)
+                {
+                    var approve = allTransitions.Where(t => t.ChangeRequestId == cr.Id && t.ActionType == "Approve").OrderBy(t => t.Timestamp).FirstOrDefault();
+                    if (approve != null)
+                    {
+                        var hours = (approve.Timestamp - cr.CreatedAt).TotalHours;
+                        if (hours >= 0) acceptanceTimes.Add(hours);
+                    }
+                }
+                double avgAcceptanceTime = acceptanceTimes.Count > 0 ? acceptanceTimes.Average() : 0;
+
                 // Generate daily stats for the specified period using actual change request data
                 var dailyStats = new List<WorkflowDailyStats>();
                 for (int i = days - 1; i >= 0; i--)
@@ -430,19 +459,6 @@ namespace Piranha.Manager.Controllers
                         cr.Status != Piranha.Models.ChangeRequestStatus.Published &&
                         cr.Status != Piranha.Models.ChangeRequestStatus.Rejected)
                 }).ToList();
-
-                // Generate bottleneck analysis based on actual stage data
-                var bottlenecks = workflows.SelectMany(w => w.Stages ?? new List<Piranha.Models.WorkflowStage>())
-                    .Select(s => new WorkflowStageBottleneck
-                    {
-                        StageId = s.Id,
-                        StageName = s.Title,
-                        WorkflowName = workflows.FirstOrDefault(w => w.Stages?.Any(stage => stage.Id == s.Id) == true)?.Title,
-                        AverageTimeInStageHours = CalculateAverageStageTime(changeRequests, s.Id),
-                        BacklogCount = changeRequests.Count(cr => cr.StageId == s.Id && 
-                            cr.Status == Piranha.Models.ChangeRequestStatus.InReview),
-                        BottleneckSeverity = CalculateBottleneckSeverity(changeRequests, s.Id)
-                    }).Where(b => !string.IsNullOrEmpty(b.WorkflowName)).ToList();
 
                 // Generate user productivity stats based on change request data
                 var userIds = changeRequests.Select(cr => cr.CreatedById).Distinct();
@@ -486,12 +502,14 @@ namespace Piranha.Manager.Controllers
                 {
                     DailyStats = dailyStats,
                     WorkflowMetrics = workflowMetrics,
-                    Bottlenecks = bottlenecks,
                     UserStats = userStats,
                     ContentTypeStats = contentTypeStats,
                     AverageProcessingTimeHours = CalculateOverallAverageProcessingTime(changeRequests),
                     CompletedWorkflows = completedWorkflows,
-                    ApprovalRate = approvalRate
+                    ApprovalRate = approvalRate,
+                    AcceptedCount = acceptedCount,
+                    RejectedCount = rejectedCount,
+                    AverageAcceptanceTimeHours = avgAcceptanceTime
                 };
 
                 return Ok(analytics);
@@ -532,33 +550,6 @@ namespace Piranha.Manager.Controllers
 
             var completed = workflowRequests.Count(cr => cr.Status == Piranha.Models.ChangeRequestStatus.Published);
             return (double)completed / workflowRequests.Count() * 100;
-        }
-
-        /// <summary>
-        /// Calculates average time spent in a specific stage.
-        /// </summary>
-        private double CalculateAverageStageTime(IEnumerable<Piranha.Models.ChangeRequest> changeRequests, Guid stageId)
-        {
-            var stageRequests = changeRequests.Where(cr => cr.StageId == stageId);
-            if (!stageRequests.Any()) return 0;
-
-            // Simplified calculation - in a real implementation, you'd track stage transitions
-            return stageRequests.Average(cr => (cr.LastModified - cr.CreatedAt).TotalHours);
-        }
-
-        /// <summary>
-        /// Calculates bottleneck severity for a stage.
-        /// </summary>
-        private int CalculateBottleneckSeverity(IEnumerable<Piranha.Models.ChangeRequest> changeRequests, Guid stageId)
-        {
-            var backlogCount = changeRequests.Count(cr => cr.StageId == stageId && 
-                cr.Status == Piranha.Models.ChangeRequestStatus.InReview);
-            
-            // Simple severity calculation based on backlog count
-            if (backlogCount > 10) return 3; // High
-            if (backlogCount > 5) return 2;  // Medium
-            if (backlogCount > 0) return 1;  // Low
-            return 0; // None
         }
 
         /// <summary>

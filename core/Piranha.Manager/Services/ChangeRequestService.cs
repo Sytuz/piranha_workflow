@@ -236,5 +236,13 @@ namespace Piranha.Manager.Services
 
             return actions;
         }
+
+        /// <summary>
+        /// Gets the transition history for a change request.
+        /// </summary>
+        public async Task<IEnumerable<ChangeRequestTransition>> GetTransitionsAsync(Guid changeRequestId)
+        {
+            return await _api.ChangeRequests.GetTransitionsAsync(changeRequestId);
+        }
     }
 }

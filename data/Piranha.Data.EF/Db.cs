@@ -252,6 +252,11 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.ChangeRequestComment> ChangeRequestComments { get; set; }
 
     /// <summary>
+    /// Gets or sets the change request transitions.
+    /// </summary>
+    public DbSet<Data.ChangeRequestTransition> ChangeRequestTransitions { get; set; }
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="options">Configuration options</param>
@@ -547,6 +552,16 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
             .WithMany()
             .HasForeignKey(c => c.StageId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // ChangeRequestTransition configurations
+        mb.Entity<Data.ChangeRequestTransition>().ToTable("Piranha_ChangeRequestTransitions");
+        mb.Entity<Data.ChangeRequestTransition>().Property(t => t.ActionType).HasMaxLength(32).IsRequired();
+        mb.Entity<Data.ChangeRequestTransition>().Property(t => t.ContentSnapshot).HasColumnType("TEXT");
+        mb.Entity<Data.ChangeRequestTransition>()
+            .HasOne(t => t.ChangeRequest)
+            .WithMany()
+            .HasForeignKey(t => t.ChangeRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     /// <summary>

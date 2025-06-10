@@ -11,11 +11,13 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha.Models;
 using Piranha.Manager.Models;
+using Piranha.Manager.Services;
 using Piranha.Services;
 
 namespace Piranha.Manager.Controllers
@@ -31,14 +33,20 @@ namespace Piranha.Manager.Controllers
     public class ChangeRequestApiController : Controller
     {
         private readonly IChangeRequestService _service;
+        private readonly IWorkflowStageService _stageService;
+        private readonly IUserResolutionService _userResolutionService;
 
         /// <summary>
         /// Default constructor.
         /// </summary>
         /// <param name="service">The change request service</param>
-        public ChangeRequestApiController(IChangeRequestService service)
+        /// <param name="stageService">The workflow stage service</param>
+        /// <param name="userResolutionService">The user resolution service</param>
+        public ChangeRequestApiController(IChangeRequestService service, IWorkflowStageService stageService, IUserResolutionService userResolutionService)
         {
             _service = service;
+            _stageService = stageService;
+            _userResolutionService = userResolutionService;
         }
 
         /// <summary>
@@ -517,6 +525,54 @@ namespace Piranha.Manager.Controllers
                 return StatusCode(500, new ErrorMessage
                 {
                     Body = $"Error retrieving change request details: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Gets the transition history for a change request.
+        /// </summary>
+        /// <param name="id">The change request id</param>
+        /// <returns>The transition history</returns>
+        [HttpGet]
+        [Route("{id}/transitions")]
+        [Authorize(Policy = Permission.ChangeRequests)]
+        public async Task<IActionResult> GetTransitions(Guid id)
+        {
+            try
+            {
+                var transitions = (await _service.GetTransitionsAsync(id)).ToList();
+                var stageIds = transitions.SelectMany(t => new[] { t.FromStageId, t.ToStageId }).Distinct().ToList();
+                var userIds = transitions.Select(t => t.UserId).Distinct().ToList();
+
+                // Resolve stage titles
+                var stageTitles = new Dictionary<Guid, string>();
+                foreach (var stageId in stageIds)
+                {
+                    var stage = await _stageService.GetByIdAsync(stageId);
+                    stageTitles[stageId] = stage?.Title ?? "Unknown";
+                }
+
+                // Resolve user names
+                var userNames = await _userResolutionService.GetUserNamesByIdsAsync(userIds);
+
+                // Map to view model
+                var result = transitions.Select(t => new ChangeRequestTransitionViewModel
+                {
+                    TransitionedAt = t.Timestamp,
+                    FromStageTitle = stageTitles.TryGetValue(t.FromStageId, out var fromTitle) ? fromTitle : "Unknown",
+                    ToStageTitle = stageTitles.TryGetValue(t.ToStageId, out var toTitle) ? toTitle : "Unknown",
+                    UserName = userNames.TryGetValue(t.UserId, out var userName) ? userName : "Unknown",
+                    Notes = t.CommentId.HasValue ? $"Comment: {t.CommentId}" : string.Empty, // TODO: Optionally resolve comment text
+                    ActionType = t.ActionType
+                }).ToList();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorMessage
+                {
+                    Body = $"Error retrieving transition history: {ex.Message}"
                 });
             }
         }
@@ -1006,5 +1062,41 @@ namespace Piranha.Manager.Controllers
         /// </summary>
         [Required]
         public Guid StageId { get; set; }
+    }
+
+    /// <summary>
+    /// Model for change request transition view.
+    /// </summary>
+    public class ChangeRequestTransitionViewModel
+    {
+        /// <summary>
+        /// Gets/sets the transition timestamp.
+        /// </summary>
+        public DateTime TransitionedAt { get; set; }
+
+        /// <summary>
+        /// Gets/sets the title of the stage from which the request was transitioned.
+        /// </summary>
+        public string FromStageTitle { get; set; }
+
+        /// <summary>
+        /// Gets/sets the title of the stage to which the request was transitioned.
+        /// </summary>
+        public string ToStageTitle { get; set; }
+
+        /// <summary>
+        /// Gets/sets the name of the user who performed the transition.
+        /// </summary>
+        public string UserName { get; set; }
+
+        /// <summary>
+        /// Gets/sets any notes associated with the transition.
+        /// </summary>
+        public string Notes { get; set; }
+
+        /// <summary>
+        /// Gets/sets the type of action performed (e.g., approve, reject, move).
+        /// </summary>
+        public string ActionType { get; set; }
     }
 }
