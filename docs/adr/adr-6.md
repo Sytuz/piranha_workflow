@@ -1,7 +1,5 @@
 # Decision Record #6 - Default Workflow (21-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **the default editorial workflow**, we decided for **the workflow described in the scenario** to achieve **an easy-to-use universal standard**, accepting **no major downside**.*
 

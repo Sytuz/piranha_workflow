@@ -1,7 +1,5 @@
 # Decision Record #3 - Kanban Board for Development (15-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **the development of the project**, we decided for **the use of a Kanban board** to achieve **visualization, flexibility, and continuous improvement**, accepting **the need for discipline in maintaining the board**.*
 

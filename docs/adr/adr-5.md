@@ -1,7 +1,5 @@
 # Decision Record #5 - Base Stages for Editorial Workflow (20-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **the editorial workflow**, we decided for **the implementation of 'Draft' and 'Published' stages in every workflow** to achieve **an easier integration with the current PiranhaCMS**, accepting **no major downside**.*
 

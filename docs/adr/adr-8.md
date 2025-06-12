@@ -1,7 +1,5 @@
 # Decision Record #8 - Change Request as the Unit of Editorial Workflow (25-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **representing a set of changes that travels within the editorial workflow**, we decided for **the Change Request as a first-class domain entity, encapsulating content, workflow, stage, and audit information** to achieve **traceability, auditability, and robust workflow orchestration**, accepting **the added complexity of managing a new aggregate and its lifecycle**.*
 
@@ -30,7 +28,7 @@ We have decided to implement the **Change Request** as the core unit of change i
 
 This model is implemented in `core/Piranha/Models/ChangeRequest.cs` and is supported by API models, services, and UI components for creation, transition, and review. The Change Request is the only entity allowed to move between workflow stages, and all transitions, approvals, and rejections are recorded against it, providing a complete audit trail.
 
-## Rationale
+Some advantages of this approach include:
 - **Traceability & Auditability**: By encapsulating all relevant data, the Change Request enables full traceability of who made what change, when, and why, supporting compliance and governance requirements.
 - **Separation of Concerns**: Decouples editorial workflow logic from core content entities, minimizing risk to existing CMS functionality and simplifying future upgrades.
 - **Extensibility**: The aggregate can be extended with comments, transition history, and custom metadata without breaking existing workflows.
@@ -47,6 +45,3 @@ This model is implemented in `core/Piranha/Models/ChangeRequest.cs` and is suppo
 
 ## Associated Drivers
 *UC-1, UC-2, UC-3, UC-9, UC-10, CON-2*
-
-## References
-- [ChangeRequest.cs](../../core/Piranha/Models/ChangeRequest.cs)

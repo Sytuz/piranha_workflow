@@ -1,7 +1,5 @@
 # Decision Record #1 - Use of Markdown for Decision Records (03-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **documenting our architectural decisions**, we decided for **the use of Markdown as the format for our ADRs** to achieve **simplicity, readability, and ease of version control**, accepting **no notable downsides**.
 

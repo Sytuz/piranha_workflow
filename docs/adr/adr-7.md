@@ -1,7 +1,5 @@
 # Decision Record #7 - Role-Based Access Control for Workflow Management (23-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **role-based access control for workflow management**, we decided for **the integration of the existing Role system and stage-based authorization** to achieve **a compatible and easy-to-use access control**, accepting **the added complexity**.*
 

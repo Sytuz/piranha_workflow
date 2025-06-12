@@ -1,7 +1,5 @@
 # Decision Record #4 - Feature Branching (17-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **the development of the project**, we decided for **the use of feature branching** to achieve **isolation, collaboration, and code quality**, accepting **the need for discipline in managing branches**.*
 

@@ -1,7 +1,5 @@
 # Decision Record #2 - Multi-Stage Workflow for Content Management (04-05-2025)
 
-## Status: Accepted
-
 ## Summary
 > *In the context of **the editorial workflow for content management**, we decided for **a multi-stage workflow** to achieve **flexibility, control, and collaboration**, accepting **additional implementation complexity as a trade-off**.
 
