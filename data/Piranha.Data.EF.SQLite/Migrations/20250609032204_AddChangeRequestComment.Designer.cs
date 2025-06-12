@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Piranha.Data.EF.SQLite;
 
@@ -10,9 +11,11 @@ using Piranha.Data.EF.SQLite;
 namespace Piranha.Data.EF.SQLite.Migrations
 {
     [DbContext(typeof(SQLiteDb))]
-    partial class DbModelSnapshot : ModelSnapshot
+    [Migration("20250609032204_AddChangeRequestComment")]
+    partial class AddChangeRequestComment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.5");
@@ -244,45 +247,6 @@ namespace Piranha.Data.EF.SQLite.Migrations
                     b.HasIndex("StageId");
 
                     b.ToTable("Piranha_ChangeRequestComments", (string)null);
-                });
-
-            modelBuilder.Entity("Piranha.Data.ChangeRequestTransition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ActionType")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ChangeRequestId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("CommentId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ContentSnapshot")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("FromStageId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ToStageId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChangeRequestId");
-
-                    b.ToTable("Piranha_ChangeRequestTransitions", (string)null);
                 });
 
             modelBuilder.Entity("Piranha.Data.Content", b =>
@@ -1704,17 +1668,6 @@ namespace Piranha.Data.EF.SQLite.Migrations
                     b.Navigation("ChangeRequest");
 
                     b.Navigation("Stage");
-                });
-
-            modelBuilder.Entity("Piranha.Data.ChangeRequestTransition", b =>
-                {
-                    b.HasOne("Piranha.Data.ChangeRequest", "ChangeRequest")
-                        .WithMany()
-                        .HasForeignKey("ChangeRequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ChangeRequest");
                 });
 
             modelBuilder.Entity("Piranha.Data.Content", b =>

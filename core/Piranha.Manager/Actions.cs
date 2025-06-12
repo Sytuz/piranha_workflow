@@ -105,6 +105,11 @@ public static class Actions
         public ActionList<ToolbarAction> ModuleList { get; private set; } = new ActionList<ToolbarAction>();
 
         /// <summary>
+        /// Gets the available actions for the my tasks view.
+        /// </summary>
+        public ActionList<ToolbarAction> MyTasksList { get; private set; } = new ActionList<ToolbarAction>();
+
+        /// <summary>
         /// Gets the available actions for the page edit view.
         /// </summary>
         public ActionList<ToolbarAction> PageEdit { get; private set; } = new ActionList<ToolbarAction>

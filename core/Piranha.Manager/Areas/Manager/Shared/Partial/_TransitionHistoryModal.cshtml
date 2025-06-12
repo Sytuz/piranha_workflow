@@ -1,0 +1,111 @@
+@* Modal for displaying transition history *@
+@inject ManagerLocalizer Localizer
+
+<div id="transitionHistoryModal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-route"></i> Transition History
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+                <div v-if="selectedTaskForHistory">
+                    <div class="mb-3">
+                        <h6><strong>{{ selectedTaskForHistory.contentTitle }}</strong></h6>
+                        <small class="text-muted">{{ selectedTaskForHistory.contentType }} | {{ selectedTaskForHistory.workflowName }}</small>
+                    </div>
+                    
+                    <div v-if="transitionHistoryData && transitionHistoryData.length > 0">
+                        <div class="timeline">
+                            <div v-for="(transition, index) in transitionHistoryData" :key="transition.id" class="timeline-item">
+                                <div class="timeline-marker">
+                                    <i class="fas fa-circle text-primary"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ transition.actionType }}</strong>
+                                            <span class="ml-2">
+                                                <span class="badge badge-secondary">{{ transition.fromStageTitle }}</span>
+                                                <i class="fas fa-arrow-right mx-1"></i>
+                                                <span class="badge badge-primary">{{ transition.toStageTitle }}</span>
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">{{ formatDate(transition.timestamp) }}</small>
+                                    </div>
+                                    <div v-if="transition.userName" class="text-muted mt-1">
+                                        <i class="fas fa-user"></i> {{ transition.userName }}
+                                    </div>
+                                    <div v-if="transition.comments" class="mt-2 p-2 bg-light rounded">
+                                        <small><strong>Comments:</strong> {{ transition.comments }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="text-center text-muted py-4">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p>No transitions have been recorded for this change request yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -24px;
+    top: 5px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+}
+
+.timeline-content {
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    background: white;
+}
+
+.timeline-item:last-child .timeline-content {
+    margin-bottom: 0;
+}
+</style>

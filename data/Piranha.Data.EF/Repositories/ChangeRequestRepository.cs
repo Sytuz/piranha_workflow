@@ -46,6 +46,7 @@ namespace Piranha.Repositories
                     ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
+                    PreviousStageId = c.PreviousStageId,
                     CreatedById = c.CreatedById,
                     CreatedAt = c.CreatedAt,
                     LastModified = c.LastModified,
@@ -76,6 +77,7 @@ namespace Piranha.Repositories
                     ContentSnapshot = changeRequest.ContentSnapshot,
                     WorkflowId = changeRequest.WorkflowId,
                     StageId = changeRequest.StageId,
+                    PreviousStageId = changeRequest.PreviousStageId,
                     CreatedById = changeRequest.CreatedById,
                     CreatedAt = changeRequest.CreatedAt,
                     LastModified = changeRequest.LastModified,
@@ -105,6 +107,7 @@ namespace Piranha.Repositories
                     ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
+                    PreviousStageId = c.PreviousStageId,
                     CreatedById = c.CreatedById,
                     CreatedAt = c.CreatedAt,
                     LastModified = c.LastModified,
@@ -133,6 +136,7 @@ namespace Piranha.Repositories
                     ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
+                    PreviousStageId = c.PreviousStageId,
                     CreatedById = c.CreatedById,
                     CreatedAt = c.CreatedAt,
                     LastModified = c.LastModified,
@@ -161,6 +165,7 @@ namespace Piranha.Repositories
                     ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
+                    PreviousStageId = c.PreviousStageId,
                     CreatedById = c.CreatedById,
                     CreatedAt = c.CreatedAt,
                     LastModified = c.LastModified,
@@ -180,7 +185,7 @@ namespace Piranha.Repositories
         {
             return await _db.ChangeRequests
                 .AsNoTracking()
-                .Where(c => c.Status == (int)status)
+                .Where(c => (ChangeRequestStatus)c.Status == status)
                 .OrderByDescending(c => c.CreatedAt)
                 .Select(c => new Models.ChangeRequest
                 {
@@ -189,6 +194,7 @@ namespace Piranha.Repositories
                     ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
+                    PreviousStageId = c.PreviousStageId,
                     CreatedById = c.CreatedById,
                     CreatedAt = c.CreatedAt,
                     LastModified = c.LastModified,
@@ -217,6 +223,7 @@ namespace Piranha.Repositories
                     ContentSnapshot = c.ContentSnapshot,
                     WorkflowId = c.WorkflowId,
                     StageId = c.StageId,
+                    PreviousStageId = c.PreviousStageId,
                     CreatedById = c.CreatedById,
                     CreatedAt = c.CreatedAt,
                     LastModified = c.LastModified,
@@ -250,10 +257,15 @@ namespace Piranha.Repositories
             entity.ContentSnapshot = changeRequest.ContentSnapshot;
             entity.WorkflowId = changeRequest.WorkflowId;
             entity.StageId = changeRequest.StageId;
+            entity.PreviousStageId = changeRequest.PreviousStageId;
+            if (entity.PreviousStageId == Guid.Empty)
+            {
+                entity.PreviousStageId = null; // Ensure PreviousStageId can be null
+            }
             entity.CreatedById = changeRequest.CreatedById;
             entity.LastModified = DateTime.Now;
             entity.ContentId = changeRequest.ContentId;
-            entity.Status = (int)changeRequest.Status;
+            entity.Status = (Data.ChangeRequestStatus)changeRequest.Status;
             entity.Notes = changeRequest.Notes;
 
             await _db.SaveChangesAsync();
@@ -277,6 +289,7 @@ namespace Piranha.Repositories
 
             if (entity != null)
             {
+                entity.PreviousStageId = entity.StageId; // Store current stage as previous
                 entity.StageId = stageId;
                 entity.LastModified = DateTime.Now;
                 await _db.SaveChangesAsync();
@@ -287,6 +300,7 @@ namespace Piranha.Repositories
                     Title = entity.Title,
                     ContentSnapshot = entity.ContentSnapshot,
                     WorkflowId = entity.WorkflowId,
+                    PreviousStageId = entity.PreviousStageId,
                     StageId = entity.StageId,
                     CreatedById = entity.CreatedById,
                     CreatedAt = entity.CreatedAt,
@@ -311,7 +325,7 @@ namespace Piranha.Repositories
 
             if (entity != null)
             {
-                entity.Status = (int)status;
+                entity.Status = (Data.ChangeRequestStatus)status;
                 entity.LastModified = DateTime.Now;
                 await _db.SaveChangesAsync();
             }

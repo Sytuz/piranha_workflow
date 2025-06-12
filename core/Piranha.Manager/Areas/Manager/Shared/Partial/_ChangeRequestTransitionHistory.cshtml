@@ -1,0 +1,30 @@
+@* Partial to display the transition history for a Change Request *@
+@model IEnumerable<Piranha.Manager.Models.ChangeRequestTransitionViewModel>
+
+<div class="card mt-3">
+    <div class="card-header bg-light">
+        <i class="fas fa-route"></i> Transition History
+    </div>
+    <div class="card-body p-0">
+        @if (Model != null && Model.Any())
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var transition in Model)
+                {
+                    <li class="list-group-item">
+                        <strong>@transition.TransitionedAt.ToString("g")</strong>:
+                        <span class="badge badge-info">@transition.FromStageTitle</span>
+                        <i class="fas fa-arrow-right mx-1"></i>
+                        <span class="badge badge-success">@transition.ToStageTitle</span>
+                        <span class="ml-2 text-muted">by @transition.UserName</span>
+                        <span class="ml-2">@transition.Notes</span>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <div class="p-3 text-muted">No transitions yet.</div>
+        }
+    </div>
+</div>

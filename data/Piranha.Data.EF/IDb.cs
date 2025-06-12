@@ -238,6 +238,16 @@ public interface IDb : IDisposable
     DbSet<Data.ChangeRequest> ChangeRequests { get; set; }
 
     /// <summary>
+    /// Gets/sets the change request comments.
+    /// </summary>
+    DbSet<Data.ChangeRequestComment> ChangeRequestComments { get; set; }
+
+    /// <summary>
+    /// Gets/sets the change request transitions.
+    /// </summary>
+    DbSet<Data.ChangeRequestTransition> ChangeRequestTransitions { get; set; }
+
+    /// <summary>
     /// Gets the entity set for the specified type.
     /// </summary>
     DbSet<T> Set<T>() where T : class;

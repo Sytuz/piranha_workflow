@@ -151,6 +151,8 @@ public sealed class Api : IApi, IDisposable
         IWorkflowStageRelationRepository workflowStageRelationRepository,
         IWorkflowStageRoleRepository workflowStageRoleRepository,
         IChangeRequestRepository changeRequestRepository,
+        IChangeRequestCommentRepository changeRequestCommentRepository,
+        IChangeRequestTransitionRepository changeRequestTransitionRepository,
         ICache cache = null,
         IStorage storage = null,
         IImageProcessor processor = null,
@@ -172,7 +174,7 @@ public sealed class Api : IApi, IDisposable
         WorkflowStages = new WorkflowStageService(workflowStageRepository, workflowStageRoleRepository);
         WorkflowStageRelations = new WorkflowStageRelationService(workflowStageRelationRepository, workflowStageRepository);
         WorkflowStageRoles = workflowStageRoleRepository;
-        ChangeRequests = new ChangeRequestService(changeRequestRepository, workflowRepository, workflowStageRepository);
+        ChangeRequests = new ChangeRequestService(changeRequestRepository, workflowRepository, workflowStageRepository, changeRequestCommentRepository, changeRequestTransitionRepository);
 
         // Create services with dependencies
         Content = new ContentService(contentRepository, contentFactory, Languages, cache, search);

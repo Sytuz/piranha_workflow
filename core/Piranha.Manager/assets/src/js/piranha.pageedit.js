@@ -555,7 +555,8 @@ piranha.pageedit = new Vue({
                     this.initChangeRequestDiagram();
                 });
             });
-        },        submitChangeRequest: function () {
+        },        
+        submitChangeRequest: function () {
             var self = this;
             // Validate form
             this.changeRequestTitleError = null;
@@ -605,9 +606,9 @@ piranha.pageedit = new Vue({
                 // Update existing change request
                 var currentChangeRequest = this.changeRequests.find(function(cr) {
                     return cr.id === self.selectedChangeRequestId;
-                });
-
+                });                
                 if (currentChangeRequest) {
+                    // First update the change request with new content
                     var updateData = {
                         Id: currentChangeRequest.id,
                         Title: this.changeRequestTitle.trim(),
@@ -622,6 +623,7 @@ piranha.pageedit = new Vue({
                         LastModified: new Date().toISOString()
                     };
 
+                    // Save the updated change request first
                     fetch(piranha.baseUrl + "manager/api/changerequest/save", {
                         method: "POST",
                         headers: {
@@ -630,6 +632,29 @@ piranha.pageedit = new Vue({
                         },
                         credentials: "same-origin",
                         body: JSON.stringify(updateData)
+                    })
+                    .then(function (response) {
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            throw new Error("Failed to update change request");
+                        }
+                    })
+                    .then(function (result) {
+                        // Now submit the change request to move it to InReview status
+                        var submitData = {
+                            UserId: currentChangeRequest.createdById
+                        };
+
+                        return fetch(piranha.baseUrl + "manager/api/changerequest/" + currentChangeRequest.id + "/submit", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                ...piranha.utils.antiForgeryHeaders()
+                            },
+                            credentials: "same-origin",
+                            body: JSON.stringify(submitData)
+                        });
                     })
                     .then(function (response) {
                         if (response.ok) {
@@ -1068,17 +1093,16 @@ piranha.pageedit = new Vue({
                 .then(function (result) {
                     self.changeRequests = result || [];
                     self.loadingChangeRequests = false;
-                    
-                    // Automatically select the most recent change request (first in the list)
+                      // Automatically select the most recent change request (first in the list)
                     if (self.changeRequests.length > 0) {
                         // Sort by creation date to ensure we get the most recent one first
                         self.changeRequests.sort(function(a, b) {
                             return new Date(b.created) - new Date(a.created);
                         });
                         
-                        // Select the most recent change request
+                        // Select the most recent change request (silently, without notification)
                         self.selectedChangeRequestId = self.changeRequests[0].id;
-                        self.loadChangeRequestVersion(self.selectedChangeRequestId);
+                        self.loadChangeRequestVersion(self.selectedChangeRequestId, false);
                     }
                 })
                 .catch(function (error) {
@@ -1087,8 +1111,7 @@ piranha.pageedit = new Vue({
                     self.loadingChangeRequests = false;
                 });
         },
-        
-        switchVersion: function () {
+          switchVersion: function () {
             var self = this;
             
             if (self.loadingChangeRequests) {
@@ -1099,8 +1122,8 @@ piranha.pageedit = new Vue({
                 // Switch to published version
                 self.loadPublishedVersion();
             } else {
-                // Switch to change request version
-                self.loadChangeRequestVersion(self.selectedChangeRequestId);
+                // Switch to change request version (with notification for manual switch)
+                self.loadChangeRequestVersion(self.selectedChangeRequestId, true);
             }
         },
         
@@ -1127,7 +1150,10 @@ piranha.pageedit = new Vue({
                         type: "danger"
                     });
                 });
-        },          loadChangeRequestVersion: function (changeRequestId) {
+        },            loadChangeRequestVersion: function (changeRequestId, showNotification) {
+            // showNotification defaults to true when not specified (for manual switches)
+            showNotification = showNotification !== false;
+            
             var self = this;
             
             self.isEditingChangeRequest = true;
@@ -1205,10 +1231,13 @@ piranha.pageedit = new Vue({
                     self.excerpt = contentSnapshot.excerpt;
                 }
                 
-                piranha.notifications.push({
-                    body: "Switched to change request: " + changeRequest.title,
-                    type: "info"
-                });
+                // Only show notification for manual switches
+                if (showNotification) {
+                    piranha.notifications.push({
+                        body: "Switched to change request: " + changeRequest.title,
+                        type: "info"
+                    });
+                }
                 
             } catch (error) {
                 console.log("Unexpected error loading change request content:", error);

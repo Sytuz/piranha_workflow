@@ -1,0 +1,80 @@
+@* Modal for approving a change request with next stage selection and workflow visualization *@
+@inject ManagerLocalizer Localizer
+
+<div id="approveChangeRequestModal" class="modal modal-panel" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-check"></i> Approve Change Request</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+                <form id="approveChangeRequestForm" v-on:submit.prevent="submitApproveChangeRequest()" novalidate>
+                    <!-- Workflow Overview and Stage Selection -->
+                    <div v-if="approvalWorkflowData && approvalAccessibleStages && approvalAccessibleStages.length > 0" class="mb-3">
+                        <label class="form-label fw-bold">Workflow Overview</label>
+                        <div class="border rounded p-2 bg-light">
+                            <!-- GoJS Diagram Container -->
+                            <div id="approveWorkflowDiagram" class="workflow-diagram mb-2" style="height: 160px; border: 1px solid #ddd; background: white; border-radius: 4px;"></div>
+                            <!-- Stage Selection -->
+                            <div class="stage-selection">
+                                <label for="approveTargetStageSelect" class="form-label">Select Target Stage <span class="text-danger">*</span></label>
+                                <select 
+                                    id="approveTargetStageSelect" 
+                                    v-model="selectedApproveTargetStage" 
+                                    class="form-control"
+                                    :class="{ 'is-invalid': approveTargetStageError }"
+                                    required>
+                                    <option value="">Choose a stage...</option>
+                                    <option 
+                                        v-for="stage in approvalAccessibleStages" 
+                                        :key="stage.id" 
+                                        :value="stage.id">
+                                        {{ stage.title }} - {{ stage.description }}
+                                    </option>
+                                </select>
+                                <div v-if="approveTargetStageError" class="invalid-feedback">
+                                    {{ approveTargetStageError }}
+                                </div>
+                                <small class="form-text text-muted">
+                                    Showing stages accessible from the current stage
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- No accessible stages warning -->
+                    <div v-if="!approvalAccessibleStages || approvalAccessibleStages.length === 0" class="alert alert-warning mb-3">
+                        <i class="fas fa-exclamation-triangle"></i> No available next stages for approval.
+                    </div>
+                    
+                    <!-- Approval Comments -->
+                    <div class="mb-3">
+                        <label for="approvalComments" class="form-label">Approval Comments (Optional)</label>
+                        <textarea id="approvalComments" v-model="approveComments" class="form-control" rows="3"
+                            placeholder="Add any comments about the approval..."></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button 
+                    type="button" 
+                    v-on:click.prevent="submitApproveChangeRequest()" 
+                    class="btn btn-success"
+                    :disabled="submittingApproveChangeRequest || !selectedApproveTargetStage"
+                    :class="{ 'btn-loading': submittingApproveChangeRequest }">
+                    <i class="fas fa-check"></i>
+                    Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

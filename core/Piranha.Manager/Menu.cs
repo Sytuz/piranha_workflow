@@ -42,14 +42,21 @@ public static class Menu
                     Route = "~/manager/media",
                     Policy = Permission.Media,
                     Css = "fas fa-images"
-                },
-                new MenuItem
+                },                new MenuItem
                 {
                     InternalId = "Comments",
                     Name = "Comments",
                     Route = "~/manager/comments",
                     Policy = Permission.Comments,
                     Css = "fas fa-comments"
+                },
+                new MenuItem
+                {
+                    InternalId = "MyTasks",
+                    Name = "My Tasks",
+                    Route = "~/manager/mytasks",
+                    Policy = Permission.ChangeRequests,
+                    Css = "fas fa-tasks"
                 }
             }
         },

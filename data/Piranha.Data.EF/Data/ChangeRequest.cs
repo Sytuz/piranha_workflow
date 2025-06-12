@@ -22,13 +22,7 @@ namespace Piranha.Data
         public string Title { get; set; }
 
         /// <summary>
-        /// Gets or sets the content id this change request is for (optional).
-        /// </summary>
-        [Required]
-        public Guid ContentId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the snapshot of the content.
+        /// Gets or sets the serialized snapshot of the content at the time of the change request.
         /// </summary>
         [Required]
         public string ContentSnapshot { get; set; }
@@ -44,6 +38,11 @@ namespace Piranha.Data
         /// </summary>
         [Required]
         public Guid StageId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the previous stage id in the workflow (can be null).
+        /// </summary>
+        public Guid? PreviousStageId { get; set; }
 
         /// <summary>
         /// Gets or sets the id of the user who created this change request.
@@ -62,9 +61,15 @@ namespace Piranha.Data
         public DateTime LastModified { get; set; }
 
         /// <summary>
+        /// Gets or sets the content id this change request is for (required).
+        /// </summary>
+        [Required]
+        public Guid ContentId { get; set; }
+
+        /// <summary>
         /// Gets or sets the status of this change request.
         /// </summary>
-        public int Status { get; set; }
+        public ChangeRequestStatus Status { get; set; } = ChangeRequestStatus.Draft;
 
         /// <summary>
         /// Gets or sets any additional notes or comments.
@@ -80,5 +85,16 @@ namespace Piranha.Data
         /// Gets or sets the stage navigation property.
         /// </summary>
         public WorkflowStage Stage { get; set; }
+    }
+
+    /// <summary>
+    /// The status of a change request.
+    /// </summary>
+    public enum ChangeRequestStatus
+    {
+        Draft,
+        InReview,
+        Rejected,
+        Published
     }
 }

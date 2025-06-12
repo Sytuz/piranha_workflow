@@ -148,7 +148,8 @@
         <div class="card">
             <div class="card-body">
                 <div class="row">
-                    <div class="col">                        <div class="form-group title">
+                    <div class="col">                        
+                        <div class="form-group title">
                             <input v-model="title" type="text" class="form-control form-control-lg" placeholder="@Localizer.Page["Your page title"]" :readonly="isChangeRequestReadOnly || isCopy">
                         </div>
                     </div>
@@ -220,4 +221,5 @@
     </div>    <partial name="Partial/_PageSettings" />
     <partial name="~/Areas/Manager/Shared/Partial/_ChangeRequestModal.cshtml" />
     <partial name="~/Areas/Manager/Shared/Partial/_FirstSaveChangeRequestModal.cshtml" />
+    <partial name="~/Areas/Manager/Shared/Partial/_ChangeRequestTransitionHistory.cshtml" model="Model.ChangeRequestTransitions" />
 </div>

@@ -38,6 +38,11 @@ namespace Piranha.Models
         public Guid StageId { get; set; }
 
         /// <summary>
+        /// Gets or sets the previous stage id in the workflow (can be null).
+        /// </summary>
+        public Guid? PreviousStageId { get; set; }
+
+        /// <summary>
         /// Gets or sets the id of the user who created this change request.
         /// </summary>
         [Required]
@@ -76,9 +81,7 @@ namespace Piranha.Models
     public enum ChangeRequestStatus
     {
         Draft,
-        Submitted,
         InReview,
-        Approved,
         Rejected,
         Published
     }

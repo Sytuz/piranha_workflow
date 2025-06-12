@@ -247,6 +247,16 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.ChangeRequest> ChangeRequests { get; set; }
 
     /// <summary>
+    /// Gets or sets the change request comments.
+    /// </summary>
+    public DbSet<Data.ChangeRequestComment> ChangeRequestComments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the change request transitions.
+    /// </summary>
+    public DbSet<Data.ChangeRequestTransition> ChangeRequestTransitions { get; set; }
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="options">Configuration options</param>
@@ -514,7 +524,8 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
         mb.Entity<Data.ChangeRequest>().Property(c => c.Title).HasMaxLength(128).IsRequired();
         mb.Entity<Data.ChangeRequest>().Property(c => c.ContentSnapshot).HasColumnType("TEXT").IsRequired();
         mb.Entity<Data.ChangeRequest>().Property(c => c.Notes).HasMaxLength(1024);
-        mb.Entity<Data.ChangeRequest>().Property(c => c.ContentId).IsRequired(); // Ensure required
+        mb.Entity<Data.ChangeRequest>().Property(c => c.ContentId).IsRequired();
+        mb.Entity<Data.ChangeRequest>().Property(c => c.Status).HasConversion<int>();
         mb.Entity<Data.ChangeRequest>()
             .HasOne(c => c.Workflow)
             .WithMany()
@@ -525,6 +536,32 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
             .WithMany()
             .HasForeignKey(c => c.StageId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ChangeRequestComment configurations
+        mb.Entity<Data.ChangeRequestComment>().ToTable("Piranha_ChangeRequestComments");
+        mb.Entity<Data.ChangeRequestComment>().Property(c => c.AuthorName).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.ChangeRequestComment>().Property(c => c.Content).HasColumnType("TEXT").IsRequired();
+        mb.Entity<Data.ChangeRequestComment>().Property(c => c.ApprovalType).HasMaxLength(50);
+        mb.Entity<Data.ChangeRequestComment>()
+            .HasOne(c => c.ChangeRequest)
+            .WithMany()
+            .HasForeignKey(c => c.ChangeRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<Data.ChangeRequestComment>()
+            .HasOne(c => c.Stage)
+            .WithMany()
+            .HasForeignKey(c => c.StageId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // ChangeRequestTransition configurations
+        mb.Entity<Data.ChangeRequestTransition>().ToTable("Piranha_ChangeRequestTransitions");
+        mb.Entity<Data.ChangeRequestTransition>().Property(t => t.ActionType).HasMaxLength(32).IsRequired();
+        mb.Entity<Data.ChangeRequestTransition>().Property(t => t.ContentSnapshot).HasColumnType("TEXT");
+        mb.Entity<Data.ChangeRequestTransition>()
+            .HasOne(t => t.ChangeRequest)
+            .WithMany()
+            .HasForeignKey(t => t.ChangeRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     /// <summary>

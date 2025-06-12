@@ -54,21 +54,73 @@ public class DefaultIdentitySeed : IIdentitySeed
     {
         if (!_db.Users.Any())
         {
-            var user = new User
+            // Create admin user
+            var admin = new User
             {
                 UserName = "admin",
                 Email = "admin@piranhacms.org",
                 SecurityStamp = Guid.NewGuid().ToString()
             };
-            var createResult = await _userManager.CreateAsync(user, "password");
-
-            if (createResult.Succeeded)
+            var adminResult = await _userManager.CreateAsync(admin, "password");
+            if (adminResult.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, "SysAdmin");
-                
-                // Update the default workflow roles
-                _workflowService.InitializeDefaultWorkflowRolesAsync().GetAwaiter().GetResult();
+                await _userManager.AddToRoleAsync(admin, "SysAdmin");
             }
+
+            // Create Author user
+            var author = new User
+            {
+                UserName = "author",
+                Email = "author@piranhacms.org",
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+            var authorResult = await _userManager.CreateAsync(author, "password");
+            if (authorResult.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(author, "Author");
+            }
+
+            // Create Reviewer user
+            var reviewer = new User
+            {
+                UserName = "reviewer",
+                Email = "reviewer@piranhacms.org",
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+            var reviewerResult = await _userManager.CreateAsync(reviewer, "password");
+            if (reviewerResult.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(reviewer, "Reviewer");
+            }
+
+            // Create Legal user
+            var legal = new User
+            {
+                UserName = "legal",
+                Email = "legal@piranhacms.org",
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+            var legalResult = await _userManager.CreateAsync(legal, "password");
+            if (legalResult.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(legal, "Legal");
+            }
+
+            // Create Publisher user
+            var publisher = new User
+            {
+                UserName = "publisher",
+                Email = "publisher@piranhacms.org",
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+            var publisherResult = await _userManager.CreateAsync(publisher, "password");
+            if (publisherResult.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(publisher, "Publisher");
+            }
+
+            // Update the default workflow roles
+            _workflowService.InitializeDefaultWorkflowRolesAsync().GetAwaiter().GetResult();
         }
     }
 }
