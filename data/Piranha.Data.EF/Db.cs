@@ -222,6 +222,41 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
     public DbSet<Data.Taxonomy> Taxonomies { get; set; }
 
     /// <summary>
+    /// Gets or sets the workflows.
+    /// </summary>
+    public DbSet<Data.Workflow> Workflows { get; set; }
+
+    /// <summary>
+    /// Gets or sets the workflow stages.
+    /// </summary>
+    public DbSet<Data.WorkflowStage> WorkflowStages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the workflow stage relations.
+    /// </summary>
+    public DbSet<Data.WorkflowStageRelation> WorkflowStageRelations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the workflow stage roles.
+    /// </summary>
+    public DbSet<Data.WorkflowStageRole> WorkflowStageRoles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the change requests.
+    /// </summary>
+    public DbSet<Data.ChangeRequest> ChangeRequests { get; set; }
+
+    /// <summary>
+    /// Gets or sets the change request comments.
+    /// </summary>
+    public DbSet<Data.ChangeRequestComment> ChangeRequestComments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the change request transitions.
+    /// </summary>
+    public DbSet<Data.ChangeRequestTransition> ChangeRequestTransitions { get; set; }
+
+    /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="options">Configuration options</param>
@@ -454,6 +489,79 @@ public abstract class Db<T> : DbContext, IDb where T : Db<T>
         mb.Entity<Data.Taxonomy>().Property(t => t.Title).IsRequired().HasMaxLength(64);
         mb.Entity<Data.Taxonomy>().Property(t => t.Slug).IsRequired().HasMaxLength(64);
         mb.Entity<Data.Taxonomy>().HasIndex(t => new { t.GroupId, t.Type, t.Slug }).IsUnique();
+
+        // Workflow configurations
+        mb.Entity<Data.Workflow>().ToTable("Piranha_Workflows");
+        mb.Entity<Data.Workflow>().Property(w => w.Title).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.Workflow>().Property(w => w.Description).HasMaxLength(512);
+
+        mb.Entity<Data.WorkflowStage>().ToTable("Piranha_WorkflowStages");
+        mb.Entity<Data.WorkflowStage>().Property(s => s.Title).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.WorkflowStage>().Property(s => s.Description).HasMaxLength(512);
+        mb.Entity<Data.WorkflowStage>()
+            .HasOne(s => s.Workflow)
+            .WithMany(w => w.Stages)
+            .HasForeignKey(s => s.WorkflowId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        mb.Entity<Data.WorkflowStageRelation>().ToTable("Piranha_WorkflowStageRelations");
+        mb.Entity<Data.WorkflowStageRelation>()
+            .HasOne(s => s.Workflow)
+            .WithMany(w => w.Relations)
+            .HasForeignKey(r => r.WorkflowId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        mb.Entity<Data.WorkflowStageRole>().ToTable("Piranha_WorkflowStageRoles");
+        mb.Entity<Data.WorkflowStageRole>()
+            .HasOne(sr => sr.WorkflowStage)
+            .WithMany(s => s.Roles)
+            .HasForeignKey(sr => sr.WorkflowStageId)
+            .OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<Data.WorkflowStageRole>().Property(sr => sr.RoleId).HasMaxLength(450).IsRequired();
+        
+        // ChangeRequest configurations
+        mb.Entity<Data.ChangeRequest>().ToTable("Piranha_ChangeRequests");
+        mb.Entity<Data.ChangeRequest>().Property(c => c.Title).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.ChangeRequest>().Property(c => c.ContentSnapshot).HasColumnType("TEXT").IsRequired();
+        mb.Entity<Data.ChangeRequest>().Property(c => c.Notes).HasMaxLength(1024);
+        mb.Entity<Data.ChangeRequest>().Property(c => c.ContentId).IsRequired();
+        mb.Entity<Data.ChangeRequest>().Property(c => c.Status).HasConversion<int>();
+        mb.Entity<Data.ChangeRequest>()
+            .HasOne(c => c.Workflow)
+            .WithMany()
+            .HasForeignKey(c => c.WorkflowId)
+            .OnDelete(DeleteBehavior.Restrict);
+        mb.Entity<Data.ChangeRequest>()
+            .HasOne(c => c.Stage)
+            .WithMany()
+            .HasForeignKey(c => c.StageId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ChangeRequestComment configurations
+        mb.Entity<Data.ChangeRequestComment>().ToTable("Piranha_ChangeRequestComments");
+        mb.Entity<Data.ChangeRequestComment>().Property(c => c.AuthorName).HasMaxLength(128).IsRequired();
+        mb.Entity<Data.ChangeRequestComment>().Property(c => c.Content).HasColumnType("TEXT").IsRequired();
+        mb.Entity<Data.ChangeRequestComment>().Property(c => c.ApprovalType).HasMaxLength(50);
+        mb.Entity<Data.ChangeRequestComment>()
+            .HasOne(c => c.ChangeRequest)
+            .WithMany()
+            .HasForeignKey(c => c.ChangeRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<Data.ChangeRequestComment>()
+            .HasOne(c => c.Stage)
+            .WithMany()
+            .HasForeignKey(c => c.StageId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // ChangeRequestTransition configurations
+        mb.Entity<Data.ChangeRequestTransition>().ToTable("Piranha_ChangeRequestTransitions");
+        mb.Entity<Data.ChangeRequestTransition>().Property(t => t.ActionType).HasMaxLength(32).IsRequired();
+        mb.Entity<Data.ChangeRequestTransition>().Property(t => t.ContentSnapshot).HasColumnType("TEXT");
+        mb.Entity<Data.ChangeRequestTransition>()
+            .HasOne(t => t.ChangeRequest)
+            .WithMany()
+            .HasForeignKey(t => t.ChangeRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     /// <summary>

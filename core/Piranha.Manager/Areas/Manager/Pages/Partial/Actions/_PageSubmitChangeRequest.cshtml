@@ -1,0 +1,10 @@
+@inject IAuthorizationService Auth
+@inject ManagerLocalizer Localizer
+
+@if ((await Auth.AuthorizeAsync(User, Permission.PagesSave)).Succeeded)
+{
+    <button v-if="state !== 'new' && !isChangeRequestReadOnly" v-on:click.prevent="openChangeRequestModal" class="btn btn-warning text-white btn-labeled" title="Submit Change Request">
+        <i class="fas fa-paper-plane"></i>
+        Submit
+    </button>
+}

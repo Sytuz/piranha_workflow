@@ -1,0 +1,17 @@
+{
+    "Workflows": "Workflows",
+    "Workflow": "Workflow",
+    "New Workflow": "New Workflow",
+    "Edit Workflow": "Edit Workflow",
+    "Delete Workflow": "Delete Workflow",
+    "Are you sure you want to delete the workflow '{0}'?": "Are you sure you want to delete the workflow '{0}'?",
+    "Workflow Type": "Workflow Type",
+    "Blank Workflow": "Blank Workflow",
+    "Standard Workflow": "Standard Workflow",
+    "The workflow was created successfully": "The workflow was created successfully",
+    "The workflow was deleted successfully": "The workflow was deleted successfully",
+    "The workflow was saved successfully": "The workflow was saved successfully",
+    "An error occurred": "An error occurred",
+    "Name is required": "Name is required",
+    "Name is already in use": "Name is already in use"
+}

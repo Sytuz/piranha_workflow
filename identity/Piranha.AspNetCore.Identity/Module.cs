@@ -11,6 +11,7 @@
 using Piranha.Extend;
 using Piranha.Manager;
 using Piranha.Security;
+using Piranha.AspNetCore.Identity.Security;
 
 namespace Piranha.AspNetCore.Identity;
 
@@ -61,9 +62,7 @@ public class Module : IModule
     /// <summary>
     /// Gets the icon url.
     /// </summary>
-    public string IconUrl => "https://piranhacms.org/assets/twitter-shield.png";
-
-    /// <summary>
+    public string IconUrl => "https://piranhacms.org/assets/twitter-shield.png";    /// <summary>
     /// Initializes the module.
     /// </summary>
     public void Init()
@@ -73,6 +72,9 @@ public class Module : IModule
         {
             App.Permissions["Manager"].Add(permission);
         }
+
+        // NOTE: Role provider will be set during dependency injection resolution
+        // See IdentityModuleExtensions.AddPiranhaIdentity method
 
         // Add manager menu items
         Menu.Items["System"].Items.Insert(0, new MenuItem

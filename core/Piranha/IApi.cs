@@ -8,6 +8,7 @@
  *
  */
 
+using Piranha.Repositories;
 using Piranha.Services;
 
 namespace Piranha;
@@ -86,4 +87,29 @@ public interface IApi : IDisposable
     /// Gets the site type service.
     /// </summary>
     ISiteTypeService SiteTypes { get; }
+    
+    /// <summary>
+    /// Gets the workflow service.
+    /// </summary>
+    IWorkflowService Workflows { get; }
+    
+    /// <summary>
+    /// Gets the workflow stage service.
+    /// </summary>
+    IWorkflowStageService WorkflowStages { get; }
+    
+    /// <summary>
+    /// Gets the workflow stage relation service.
+    /// </summary>
+    IWorkflowStageRelationService WorkflowStageRelations { get; }
+    
+    /// <summary>
+    /// Gets the workflow stage roles repository.
+    /// </summary>
+    IWorkflowStageRoleRepository WorkflowStageRoles { get; }
+
+    /// <summary>
+    /// Gets the change request service.
+    /// </summary>
+    IChangeRequestService ChangeRequests { get; }
 }

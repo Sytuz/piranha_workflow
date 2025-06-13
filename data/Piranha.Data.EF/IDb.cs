@@ -213,6 +213,41 @@ public interface IDb : IDisposable
     DbSet<Data.Taxonomy> Taxonomies { get; set; }
 
     /// <summary>
+    /// Gets/sets the workflows.
+    /// </summary>
+    DbSet<Data.Workflow> Workflows { get; set; }
+
+    /// <summary>
+    /// Gets/sets the workflow stages.
+    /// </summary>
+    DbSet<Data.WorkflowStage> WorkflowStages { get; set; }
+
+    /// <summary>
+    /// Gets/sets the workflow stage relations.
+    /// </summary>
+    DbSet<Data.WorkflowStageRelation> WorkflowStageRelations { get; set; }
+
+    /// <summary>
+    /// Gets/sets the workflow stage roles.
+    /// </summary>
+    DbSet<Data.WorkflowStageRole> WorkflowStageRoles { get; set; }
+
+    /// <summary>
+    /// Gets/sets the change requests.
+    /// </summary>
+    DbSet<Data.ChangeRequest> ChangeRequests { get; set; }
+
+    /// <summary>
+    /// Gets/sets the change request comments.
+    /// </summary>
+    DbSet<Data.ChangeRequestComment> ChangeRequestComments { get; set; }
+
+    /// <summary>
+    /// Gets/sets the change request transitions.
+    /// </summary>
+    DbSet<Data.ChangeRequestTransition> ChangeRequestTransitions { get; set; }
+
+    /// <summary>
     /// Gets the entity set for the specified type.
     /// </summary>
     DbSet<T> Set<T>() where T : class;

@@ -1,0 +1,149 @@
+@page "~/manager/mytasks"
+@model Piranha.Manager.Areas.Manager.Pages.MyTasksModel
+@inject ManagerLocalizer Localizer
+@{
+    ViewBag.Title = "My Tasks";
+    ViewBag.MenuItem = "MyTasks";
+}
+@section script
+{
+    <script
+        src="~/manager/assets/js/piranha.mytasks.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script>
+        piranha.permissions.load(function () {
+            piranha.mytasks.load();
+        });
+    </script>
+}
+
+<div id="mytasks">
+    <div class="top">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
+                <li class="breadcrumb-item active" aria-current="page">My Tasks</li>
+            </ol>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="top-nav">
+                @foreach (var action in Piranha.Manager.Actions.Toolbars.MyTasksList)
+                {
+                    <partial name="@action.ActionView" />
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="app" :class="{ ready: !loading }">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col">
+                    <div class="btn-group mb-3">
+                        <button v-on:click.prevent="setStatus('all')" class="btn btn-sm"
+                            :class="{ 'btn-primary': state === 'all', 'btn-light': state !== 'all' }">@Localizer.General["All"]</button>
+                        <button v-on:click.prevent="setStatus('pending')" class="btn btn-sm"
+                            :class="{ 'btn-primary': state === 'pending', 'btn-light': state !== 'pending' }">Pending</button>
+                        <button v-on:click.prevent="setStatus('approved')" class="btn btn-sm"
+                            :class="{ 'btn-primary': state === 'approved', 'btn-light': state !== 'approved' }">Approved</button>
+                        <button v-on:click.prevent="setStatus('rejected')" class="btn btn-sm"
+                            :class="{ 'btn-primary': state === 'rejected', 'btn-light': state !== 'rejected' }">Rejected</button>
+                    </div>
+
+                    <div v-if="filteredItems.length === 0" class="empty-info">
+                        <p v-if="loading">Loading your tasks...</p>
+                        <p v-else-if="state === 'all'">You have no tasks assigned to you.</p>
+                        <p v-else>No {{ state }} tasks found.</p>
+                    </div>
+
+                    <table v-else class="table table-borderless">
+                        <thead>
+                            <tr>
+                                <th class="w-25">Content</th>
+                                <th class="w-13">Workflow</th>
+                                <th class="w-12">Current Stage</th>
+                                <th class="w-10">Status</th>
+                                <th class="w-12">Created</th>
+                                <th class="w-15 text-center">Actions</th>
+                                <th class="w-18 text-center">Transition Path</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-for="task in filteredItems" v-bind:key="task.id">
+                                <tr v-bind:class="'task-row status-' + task.status.toLowerCase()">
+                                    <td class="align-middle">
+                                        <div>
+                                            <strong>
+                                                <a v-if="task.editUrl" :href="task.editUrl" target="_blank">{{
+                                                    task.contentTitle }}</a>
+                                                <span v-else>{{ task.contentTitle }}</span>
+                                            </strong>
+                                            <small class="text-muted d-block">{{ task.contentType }}</small>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">{{ task.workflowName }}</td>
+                                    <td class="align-middle">{{ task.currentStage }}</td>
+                                    <td class="align-middle text-left">
+                                        <span class="badge m-0" v-bind:class="{
+                                            'badge-warning': task.status === 'InReview',
+                                            'badge-success': task.status === 'Published',
+                                            'badge-danger': task.status === 'Rejected',
+                                            'badge-secondary': task.status === 'Draft'
+                                        }">{{ task.status }}</span>
+                                    </td>
+                                    <td class="align-middle">{{ formatDate(task.created) }}</td>                                    
+                                    <td class="align-middle text-center">
+                                        <div class="btn-group btn-group-sm" role="group" style="gap: 4px;">
+                                            <button v-if="canApprove(task)"
+                                                v-on:click.prevent="approveTask(task)" class="btn btn-success btn-sm px-3"
+                                                title="Approve">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button v-if="canReject(task)"
+                                                v-on:click.prevent="rejectTask(task)" class="btn btn-danger btn-sm px-3"
+                                                title="Reject">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <a v-if="(canEdit(task) || canView(task)) && task.editUrl" 
+                                                v-bind:href="task.editUrl" 
+                                                target="_blank"
+                                                class="btn btn-primary btn-sm px-3" 
+                                                v-bind:title="getEditButtonText(task) + ' Content'">
+                                                <i v-bind:class="getEditButtonIcon(task)"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle text-center">
+                                        <button v-if="task.transitionPath" 
+                                                v-on:click.prevent="showTransitionHistory(task)"
+                                                class="btn btn-link p-0 text-info" 
+                                                v-bind:title="'View transition history: ' + getTransitionPath(task)">
+                                            <i class="fas fa-route"></i>
+                                            <span class="ml-1">View Path</span>
+                                        </button>
+                                        <span v-else class="text-muted">
+                                            <i class="fas fa-minus"></i> No transitions
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr v-if="task.notes" class="task-notes">
+                                    <td colspan="7" class="pt-0">
+                                        <small class="text-muted">
+                                            <strong>Notes:</strong> {{ task.notes }}
+                                        </small>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_ApproveChangeRequestModal.cshtml")
+    @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_RejectChangeRequestModal.cshtml")
+    @await Html.PartialAsync("~/Areas/Manager/Shared/Partial/_TransitionHistoryModal.cshtml")
+</div>
+
+

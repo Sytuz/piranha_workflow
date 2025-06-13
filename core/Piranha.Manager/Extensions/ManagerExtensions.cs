@@ -54,6 +54,12 @@ public static class ManagerModuleExtensions
         services.AddScoped<PageService>();
         services.AddScoped<PostService>();
         services.AddScoped<SiteService>();
+        services.AddScoped<WorkflowService>();
+        services.AddScoped<Piranha.Services.IChangeRequestService, Piranha.Services.ChangeRequestService>();
+
+        // Add resolution services for workflow dashboard
+        services.AddScoped<IUserResolutionService, DefaultUserResolutionService>();
+        services.AddScoped<IContentTypeResolutionService, DefaultContentTypeResolutionService>();
 
         // Add localization service
         services.AddScoped<ManagerLocalizer>();

@@ -1,0 +1,225 @@
+@page "~/manager/workflow/edit/{id?}"
+@model Piranha.Manager.Areas.Manager.Pages.WorkflowEditModel
+@inject ManagerLocalizer Localizer
+@{
+    ViewBag.Title = Localizer.Workflow["Edit workflow"];
+    ViewBag.MenuItem = "Workflows";
+}
+@section script
+{
+    <!-- Explicitly load GoJS library first -->
+    <script src="~/manager/assets/js/piranha-deps.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script src="~/manager/assets/js/piranha.workflowedit.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+
+    <style>
+        .checkbox-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            background-color: #fff;
+        }
+        .checkbox-list .checkbox {
+            margin-bottom: 0.25rem;
+        }
+        .checkbox-list .checkbox:last-child {
+            margin-bottom: 0;
+        }
+        .checkbox-list label {
+            font-weight: normal;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-list input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+        
+        /* Diagram Container Styles */
+        .workflow-preview-container {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        .gojs-diagram-container {
+            height: 400px;
+            min-height: 400px; /* Enforce minimum height */
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            background-color: #f8f9fa;
+            position: relative;
+            width: 100%; /* Ensure full width */
+        }
+        .empty-diagram-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+        }
+    </style>
+
+    <script>
+        // Wait for document ready to ensure proper initialization
+        document.addEventListener("DOMContentLoaded", function() {
+            console.log("WorkflowEdit - DOM fully loaded");
+            if (typeof go === 'undefined') {
+                console.error("GoJS library not found! Check script loading order.");
+            } else {
+                console.log("GoJS library successfully loaded");
+            }
+            
+            piranha.permissions.load(function() {
+                console.log("Permissions loaded, initializing workflow editor");
+                
+                @if (Model.Id.HasValue)
+                {
+                    <text>piranha.workflowedit.load("@Model.Id");</text>
+                }
+                else
+                {
+                    <text>piranha.workflowedit.create();</text>
+                }
+                $(".title input").focus();
+                
+                // Let the Vue component handle diagram initialization through its lifecycle hooks
+                // This will be more reliable than separate initialization attempts here
+            });
+        });
+    </script>
+}
+
+<div id="workflowedit">
+    <div class="top">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
+                <li class="breadcrumb-item"><a href="~/manager/workflow">@Localizer.Menu["Workflows"]</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Localizer.General["Edit"]</li>
+            </ol>
+        </nav>
+
+        <div class="container-fluid app" :class="{ ready: !loading }">
+            <div class="top-nav">
+                <button v-on:click.prevent="save" class="btn btn-success btn-labeled">
+                    <i class="fas fa-check"></i>@Localizer.General["Save"]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid app" :class="{ ready: !loading }">
+        <!-- Title -->
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group title">
+                            <input v-model="title" type="text" class="form-control form-control-lg" placeholder="@Localizer.Workflow["Your workflow title"]">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <textarea v-model="description" class="form-control" placeholder="@Localizer.General["Description"]" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Workflow Visualization -->
+        <div class="card workflow-preview-container">
+            <div class="card-header">
+                <span class="title">@Localizer.Workflow["Workflow Preview"]</span>
+            </div>
+            <div class="card-body">
+                <div ref="workflowDiagramDiv" id="workflowDiagramDiv" class="gojs-diagram-container">
+                    <div v-if="stages.length === 0" class="empty-diagram-message">
+                        <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                        <h5>No stages defined yet</h5>
+                        <p class="text-muted">Add stages below to see the workflow diagram</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stages -->
+        <div class="card">
+            <div class="card-header">
+                <span class="title">@Localizer.Workflow["Stages"]</span>
+            </div>
+            <div class="card-body">
+                <div class="sortable">
+                    <div v-for="(stage, index) in stages" class="sortable-item">
+                        <div class="actions-move">
+                            <button v-on:click.prevent="moveStageUp(index)" class="btn btn-sm" :disabled="index === 0">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                            <button v-on:click.prevent="moveStageDown(index)" class="btn btn-sm" :disabled="index === stages.length - 1">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="content">
+                            <div class="form-group">
+                                <input v-model="stage.title" type="text" class="form-control" placeholder="@Localizer.Workflow["Stage name"]">
+                            </div>
+                            <div class="form-group">
+                                <textarea v-model="stage.description" class="form-control" rows="2" placeholder="@Localizer.Workflow["Stage description"]"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>@Localizer.Workflow["Authorized Roles"]</label>
+                                <div class="checkbox-list">
+                                    <div v-for="role in availableRoles" :key="role.id" class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               :id="'role-' + stage.id + '-' + role.id"
+                                               :value="role.id" 
+                                               :checked="stage.roleIds && stage.roleIds.includes(role.id)"
+                                               @@change="toggleStageRole(stage, role.id, $event)">
+                                        <label class="form-check-label" :for="'role-' + stage.id + '-' + role.id">
+                                            {{ role.name }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">@Localizer.Workflow["Select which roles can perform actions in this stage"]</small>
+                            </div>
+                            <div class="form-group">
+                                <label>@Localizer.Workflow["Stage Relations"]</label>
+                                <div class="checkbox-list">
+                                    <div v-for="targetStage in getOtherStages(stage.id)" :key="targetStage.id" class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               :id="'relation-' + stage.id + '-' + targetStage.id"
+                                               :checked="canTransitionTo(stage.id, targetStage.id)"
+                                               @@change="toggleStageRelation(stage.id, targetStage.id, $event)">
+                                        <label class="form-check-label" :for="'relation-' + stage.id + '-' + targetStage.id">
+                                            → {{ targetStage.title }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">@Localizer.Workflow["Select which stages this stage can transition to"]</small>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button v-on:click.prevent="removeStage(index)" class="btn btn-sm danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div v-if="stages.length === 0" class="empty-info">
+                        <p>@Localizer.Workflow["No stages have been added yet."]</p>
+                    </div>
+                    <div class="addbutton">
+                        <button v-on:click.prevent="addStage" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> @Localizer.Workflow["Add stage"]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -96,6 +96,32 @@ public sealed class Api : IApi, IDisposable
     public ISiteTypeService SiteTypes { get; }
 
     /// <summary>
+    /// Gets the workflow service.
+    /// </summary>
+    public IWorkflowService Workflows { get; }
+
+    /// <summary>
+    /// Gets the workflow stage service.
+    /// </summary>
+    public IWorkflowStageService WorkflowStages { get; }
+
+    /// <summary>
+    /// Gets the workflow stage relation service.
+    /// </summary>
+    public IWorkflowStageRelationService WorkflowStageRelations { get; }
+
+    /// <summary>
+    /// Gets the workflow stage roles repository.
+    /// </summary>
+    public IWorkflowStageRoleRepository WorkflowStageRoles { get; }
+
+    /// <summary>
+    /// Gets the change request service.
+    /// </summary>
+    public IChangeRequestService ChangeRequests { get; }
+
+
+    /// <summary>
     /// Gets if the current repository has caching enabled or not.
     /// </summary>
     public bool IsCached => _cache != null;
@@ -120,6 +146,13 @@ public sealed class Api : IApi, IDisposable
         IPostTypeRepository postTypeRepository,
         ISiteRepository siteRepository,
         ISiteTypeRepository siteTypeRepository,
+        IWorkflowRepository workflowRepository,
+        IWorkflowStageRepository workflowStageRepository,
+        IWorkflowStageRelationRepository workflowStageRelationRepository,
+        IWorkflowStageRoleRepository workflowStageRoleRepository,
+        IChangeRequestRepository changeRequestRepository,
+        IChangeRequestCommentRepository changeRequestCommentRepository,
+        IChangeRequestTransitionRepository changeRequestTransitionRepository,
         ICache cache = null,
         IStorage storage = null,
         IImageProcessor processor = null,
@@ -136,10 +169,16 @@ public sealed class Api : IApi, IDisposable
         Params = new ParamService(paramRepository, cache);
         PostTypes = new PostTypeService(postTypeRepository, cache);
         SiteTypes = new SiteTypeService(siteTypeRepository, cache);
+          // Create workflow services
+        Workflows = new WorkflowService(workflowRepository);
+        WorkflowStages = new WorkflowStageService(workflowStageRepository, workflowStageRoleRepository);
+        WorkflowStageRelations = new WorkflowStageRelationService(workflowStageRelationRepository, workflowStageRepository);
+        WorkflowStageRoles = workflowStageRoleRepository;
+        ChangeRequests = new ChangeRequestService(changeRequestRepository, workflowRepository, workflowStageRepository, changeRequestCommentRepository, changeRequestTransitionRepository);
 
         // Create services with dependencies
         Content = new ContentService(contentRepository, contentFactory, Languages, cache, search);
-        Sites = new SiteService(siteRepository, contentFactory, Languages,cache);
+        Sites = new SiteService(siteRepository, contentFactory, Languages, cache);
         Aliases = new AliasService(aliasRepository, Sites, cache);
         Media = new MediaService(mediaRepository, Params, storage, processor, cache);
         Pages = new PageService(pageRepository, contentFactory, Sites, Params, Media, cache, search);

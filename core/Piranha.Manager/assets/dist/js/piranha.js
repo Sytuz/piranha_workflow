@@ -366,6 +366,14 @@ piranha.utils = {
     formatUrl: function (str) {
         return str.replace("~/", piranha.baseUrl);
     },
+    generateId: function () {
+        // Generate a valid GUID format (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx)
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0,
+                v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    },
     isEmptyHtml: function (str) {
         return str == null || str.replace(/(<([^>]+)>)/ig,"").replace(/\s/g, "") == "" && str.indexOf("<img") === -1;
     },

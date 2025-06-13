@@ -13,6 +13,13 @@
     <script src="@Url.Content(Piranha.Manager.Editor.EditorScripts.EditorScriptUrl)"></script>
     <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
     <script src="~/manager/assets/js/piranha.pageedit.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script>
+        // Configuration for change request creation
+        window.changeRequestConfig = {
+            userId: '@Model.UserId',
+            workflowId: '@Model.WorkflowId'
+        };
+    </script>
 
     @if (action == "edit")
     {
@@ -67,20 +74,28 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
                 <li class="breadcrumb-item"><a href="~/manager/pages">@Localizer.Menu["Pages"]</a></li>
-                <li class="breadcrumb-item active" aria-current="page">@Localizer.General["Edit"]</li>
-                <li v-if="isCopy" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-warning">@Localizer.General["Copy"]</span></li>
+                <li class="breadcrumb-item active" aria-current="page">@Localizer.General["Edit"]</li>                <li v-if="isCopy" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-warning">@Localizer.General["Copy"]</span></li>
+                <li v-if="isChangeRequestReadOnly" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-danger"><i class="fas fa-lock"></i> Read-Only</span></li>
                 <li v-if="isScheduled" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-info"><i class="fas fa-calendar-alt"></i> @Localizer.General["Scheduled"]</span></li>
                 <li v-if="state === 'unpublished'" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-info"><i class="fas fa-unlink"></i> @Localizer.General["Unpublished"]</span></li>
                 <li v-if="state === 'draft'" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-info"><i class="fas fa-pen"></i> @Localizer.General["Draft"]</span></li>
             </ol>
-        </nav>
-
-        <div class="container-fluid app" :class="{ ready: !loading }">
+        </nav>        <div class="container-fluid app" :class="{ ready: !loading }">
             <div class="top-nav">
                 @foreach (var menuAction in Piranha.Manager.Actions.Toolbars.PageEdit)
                 {
                     <partial name="@menuAction.ActionView" />
                 }
+                
+                <!-- Change Request Version Dropdown -->                <div v-if="state !== 'new'" class="form-group mb-0 d-inline-block ml-3">
+                    <label for="versionSelect" class="sr-only">Version</label>
+                    <select id="versionSelect" class="form-control form-control-sm" v-model="selectedChangeRequestId" v-on:change="switchVersion()" :disabled="loadingChangeRequests">
+                        <option v-for="cr in changeRequests" :value="cr.id" :key="cr.id">
+                            {{ cr.title }} ({{ formatStage(cr.currentStage) }})
+                        </option>
+                    </select>
+                    <small v-if="loadingChangeRequests" class="text-muted">Loading versions...</small>
+                </div>
             </div>
         </div>
     </div>
@@ -133,20 +148,21 @@
         <div class="card">
             <div class="card-body">
                 <div class="row">
-                    <div class="col">
+                    <div class="col">                        
                         <div class="form-group title">
-                            <input v-model="title" type="text" class="form-control form-control-lg" placeholder="@Localizer.Page["Your page title"]">
+                            <input v-model="title" type="text" class="form-control form-control-lg" placeholder="@Localizer.Page["Your page title"]" :readonly="isChangeRequestReadOnly || isCopy">
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Blocks -->
+        </div>        <!-- Blocks -->
         <div class="card" :class="{ 'd-none': selectedRegion.uid != 'uid-blocks' }">
-            <div class="card-body" v-bind:class="{ readonly: isCopy }">
+            <div class="card-body" v-bind:class="{ readonly: isCopy || isChangeRequestReadOnly }">
+                <div v-if="isChangeRequestReadOnly" class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> This change request is read-only and cannot be modified.
+                </div>
                 <div id="content-blocks" class="blocks@(Config.ManagerOutlined ? " blocks-outline" : "")">
-                    <a v-if="!isCopy" href="#" class="block-add unsortable" v-on:click.prevent="piranha.blockpicker.open(piranha.pageedit.addBlock, 0)">
+                    <a v-if="!isCopy && !isChangeRequestReadOnly" href="#" class="block-add unsortable" v-on:click.prevent="piranha.blockpicker.open(piranha.pageedit.addBlock, 0)">
                         <hr>
                         <i class="fas fa-plus-circle"></i>
                     </a>
@@ -165,8 +181,7 @@
                                     </span>
                                     <span class="btn btn-sm handle">
                                         <i class="fas fa-ellipsis-v"></i>
-                                    </span>
-                                    <button v-on:click.prevent="removeBlock(block)" class="btn btn-sm danger block-remove" tabindex="-1">
+                                    </span>                                    <button v-if="!isCopy && !isChangeRequestReadOnly" v-on:click.prevent="removeBlock(block)" class="btn btn-sm danger block-remove" tabindex="-1">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -174,8 +189,7 @@
                             <component v-if="!block.meta.isGroup" v-bind:is="block.meta.component" v-bind:uid="block.meta.uid" v-bind:toolbar="'tb-' + block.meta.uid" v-bind:model="block.model" v-on:update-title='updateBlockTitle($event)'></component>
                             <component v-if="block.meta.isGroup" v-bind:is="block.meta.component" v-bind:uid="block.meta.uid" v-bind:toolbar="'tb-' + block.meta.uid" v-bind:model="block"></component>
                             <div class="content-blocker"></div>
-                        </div>
-                        <a v-if="!isCopy" href="#" class="block-add" v-on:click.prevent="piranha.blockpicker.open(piranha.pageedit.addBlock, index + 1)">
+                        </div>                        <a v-if="!isCopy && !isChangeRequestReadOnly" href="#" class="block-add" v-on:click.prevent="piranha.blockpicker.open(piranha.pageedit.addBlock, index + 1)">
                             <hr>
                             <i class="fas fa-plus-circle"></i>
                         </a>
@@ -195,18 +209,17 @@
                     <component v-bind:is="editor.component" v-bind:uid="editor.uid" v-bind:id="id"></component>
                 </div>
             </div>
-        </div>
-
-        <!-- Content Regions -->
+        </div>        <!-- Content Regions -->
         <div class="card" :class="{ 'd-none': selectedRegion.uid != region.meta.uid }" v-for="region in contentRegions">
             <div class="card-body">
-                <div class="region" :class="{ readonly: isCopy, 'region-center': region.meta.width === 'centered' }">
+                <div class="region" :class="{ readonly: isCopy || isChangeRequestReadOnly, 'region-center': region.meta.width === 'centered' }">
                     <region v-bind:content="'page'" v-bind:type="typeId" v-bind:model="region"></region>
                     <div class="content-blocker"></div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <partial name="Partial/_PageSettings" />
+    </div>    <partial name="Partial/_PageSettings" />
+    <partial name="~/Areas/Manager/Shared/Partial/_ChangeRequestModal.cshtml" />
+    <partial name="~/Areas/Manager/Shared/Partial/_FirstSaveChangeRequestModal.cshtml" />
+    <partial name="~/Areas/Manager/Shared/Partial/_ChangeRequestTransitionHistory.cshtml" model="Model.ChangeRequestTransitions" />
 </div>

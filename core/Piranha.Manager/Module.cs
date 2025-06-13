@@ -59,7 +59,15 @@ public sealed class Module : IModule
         new PermissionItem { Name = Permission.SitesAdd, Title = "Add Sites", Category = "Sites" },
         new PermissionItem { Name = Permission.SitesDelete, Title = "Delete Sites", Category = "Sites" },
         new PermissionItem { Name = Permission.SitesEdit, Title = "Edit Sites", Category = "Sites" },
-        new PermissionItem { Name = Permission.SitesSave, Title = "Save Sites", Category = "Sites" }
+        new PermissionItem { Name = Permission.SitesSave, Title = "Save Sites", Category = "Sites" },
+        new PermissionItem { Name = Permission.ChangeRequests, Title = "List Change Requests", Category = "Change Requests" },
+        new PermissionItem { Name = Permission.ChangeRequestsAdd, Title = "Add Change Requests", Category = "Change Requests" },
+        new PermissionItem { Name = Permission.ChangeRequestsDelete, Title = "Delete Change Requests", Category = "Change Requests" },
+        new PermissionItem { Name = Permission.ChangeRequestsEdit, Title = "Edit Change Requests", Category = "Change Requests" },
+        new PermissionItem { Name = Permission.ChangeRequestsSave, Title = "Save Change Requests", Category = "Change Requests" },
+        new PermissionItem { Name = Permission.ChangeRequestsSubmit, Title = "Submit Change Requests", Category = "Change Requests" },
+
+        new PermissionItem { Name = Permission.Admin, Title = "Workflow Management", Category = "Content"}
     };
 
     /// <summary>

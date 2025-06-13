@@ -84,10 +84,20 @@ public static class PiranhaEFExtensions
         services.Add(new ServiceDescriptor(typeof(ISiteRepository), typeof(SiteRepository), scope));
         services.Add(new ServiceDescriptor(typeof(ISiteTypeRepository), typeof(SiteTypeRepository), scope));
 
+        services.Add(new ServiceDescriptor(typeof(IWorkflowRepository), typeof(WorkflowRepository), scope));
+        services.Add(new ServiceDescriptor(typeof(IWorkflowStageRepository), typeof(WorkflowStageRepository), scope));
+        services.Add(new ServiceDescriptor(typeof(IWorkflowStageRelationRepository), typeof(WorkflowStageRelationRepository), scope));
+        services.Add(new ServiceDescriptor(typeof(IWorkflowStageRoleRepository), typeof(WorkflowStageRoleRepository), scope));
+        services.Add(new ServiceDescriptor(typeof(IChangeRequestRepository), typeof(ChangeRequestRepository), scope));
+        services.Add(new ServiceDescriptor(typeof(IChangeRequestCommentRepository), typeof(ChangeRequestCommentRepository), scope));
+        services.Add(new ServiceDescriptor(typeof(IChangeRequestTransitionRepository), typeof(ChangeRequestTransitionRepository), scope));
+
         // Register services
         services.Add(new ServiceDescriptor(typeof(IContentServiceFactory), typeof(ContentServiceFactory), ServiceLifetime.Singleton));
         services.Add(new ServiceDescriptor(typeof(IDb), typeof(T), scope));
+        services.Add(new ServiceDescriptor(typeof(IWorkflowStageService), typeof(WorkflowStageService), scope));
 
+        // Return the service collection
         return services;
     }
 }

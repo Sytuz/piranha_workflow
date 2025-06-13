@@ -42,14 +42,21 @@ public static class Menu
                     Route = "~/manager/media",
                     Policy = Permission.Media,
                     Css = "fas fa-images"
-                },
-                new MenuItem
+                },                new MenuItem
                 {
                     InternalId = "Comments",
                     Name = "Comments",
                     Route = "~/manager/comments",
                     Policy = Permission.Comments,
                     Css = "fas fa-comments"
+                },
+                new MenuItem
+                {
+                    InternalId = "MyTasks",
+                    Name = "My Tasks",
+                    Route = "~/manager/mytasks",
+                    Policy = Permission.ChangeRequests,
+                    Css = "fas fa-tasks"
                 }
             }
         },
@@ -64,7 +71,23 @@ public static class Menu
                 {
                     InternalId = "Aliases", Name = "Aliases", Route = "~/manager/aliases",
                     Policy = Permission.Aliases, Css = "fas fa-random"
-                }
+                },
+                new MenuItem
+                {
+                    InternalId = "Workflows",
+                    Name = "Workflows",
+                    Route = "~/manager/workflow",
+                    Policy = Permission.Admin,
+                    Css = "fas fa-sitemap"
+                },
+                new MenuItem
+                {
+                    InternalId = "WorkflowDashboard",
+                    Name = "Workflow Dashboard",
+                    Route = "~/manager/workflow-dashboard",
+                    Policy = Permission.Admin,
+                    Css = "fas fa-chart-bar"
+                },
             }
         },
         new MenuItem
@@ -89,6 +112,14 @@ public static class Menu
                     Route = "~/manager/modules",
                     Policy = Permission.Modules,
                     Css = "fas fa-code-branch"
+                },
+                new MenuItem
+                {
+                    InternalId = "Observability",
+                    Name = "Observability",
+                    Route = "~/manager/observability",
+                    Policy = Permission.Admin,
+                    Css = "fas fa-chart-line"
                 }
             }
         }

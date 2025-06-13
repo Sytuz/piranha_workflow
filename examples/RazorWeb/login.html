@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en" style="min-height:100%">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="/manager/assets/css/slim.min.css">
+    <link rel="icon" href="/manager/assets/img/logo.png">
+
+    <title>Login</title>
+</head>
+<body id="login" class="">
+    <div class="container">
+        <form method="post" class="needs-validation" novalidate>
+            <input name="__RequestVerificationToken" type="hidden" value="CfDJ8HC-A11Tz_lOqjnpGEn70CM6X7BaMhL9uHbpwkcRS3ND-T0CfSlZlP1b4KSWnFb_MWJ_kUGKooNFkYSr16voCfXsVz6t-wX5T48mEbfPpblLOWq0d0f5eGMz5DJ0jhqqbBIa7cyxPn0bWsL-Qhi7QKo" />
+            <div class="card card-login ">
+                <div class="card-body card-body-logo">
+                    <div class="logo"></div>
+                    <p class="banner">
+                        Piranha CMS
+                        <small>Version 12.0.0</small>
+                    </p>
+                </div>
+
+
+                <div class="card-body card-body-form">
+                    <div class="form-group">
+                        <label for="username" class="col-form-label col-form-label-lg">Username</label>
+                        <input autofocus id="username" required name="username" type="text" class="form-control form-control-lg text-center" placeholder="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password" class="col-form-label col-form-label-lg">Password</label>
+                        <input name="password" required type="password" class="form-control form-control-lg text-center" placeholder="password">
+                    </div>
+                    <button class="btn btn-lg btn-block btn-primary" type="submit">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+        (function () {
+            'use strict';
+            window.addEventListener('load', function () {
+                var forms = document.getElementsByClassName('needs-validation');
+                var validation = Array.prototype.filter.call(forms, function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (form.checkValidity() === false) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        form.classList.add('was-validated');
+                    }, false);
+                });
+            }, false);
+        })();
+    </script>
+</body>
+</html>

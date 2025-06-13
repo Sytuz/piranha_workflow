@@ -96,7 +96,14 @@ public class UI : BaseTests
             new PostRepository(db, serviceFactory),
             new PostTypeRepository(db),
             new SiteRepository(db, serviceFactory),
-            new SiteTypeRepository(db)
+            new SiteTypeRepository(db),
+            new WorkflowRepository(db),
+            new WorkflowStageRepository(db),
+            new WorkflowStageRelationRepository(db),
+            new WorkflowStageRoleRepository(db),
+            new ChangeRequestRepository(db),
+            new ChangeRequestCommentRepository(db),
+            new ChangeRequestTransitionRepository(db)
         );
     }
 }

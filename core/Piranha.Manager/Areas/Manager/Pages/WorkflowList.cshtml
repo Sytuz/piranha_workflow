@@ -1,0 +1,175 @@
+@page "~/manager/workflow"
+@model Piranha.Manager.Areas.Manager.Pages.WorkflowListModel
+@inject ManagerLocalizer Localizer
+@{
+    ViewBag.Title = Localizer.Workflow["Workflows"];
+    ViewBag.MenuItem = "Workflows";
+}
+@section script
+{
+    <script src="~/manager/assets/js/piranha.components.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+    <script src="~/manager/assets/js/piranha.workflow.min.js?v=@Piranha.Utils.GetAssemblyVersionHash(typeof(Piranha.Manager.Module).Assembly)"></script>
+}
+
+<div id="workflow">
+    <div class="top">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
+                <li class="breadcrumb-item active" aria-current="page">@Localizer.Menu["Workflows"]</li>
+            </ol>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="top-nav">
+                <button class="btn btn-primary btn-labeled" data-toggle="modal" data-target="#workflowModal">
+                    <i class="fas fa-plus"></i>@Localizer.Workflow["Add Workflow"]
+                </button>
+                <button v-if="loadingFailed" v-on:click.prevent="retry" class="btn btn-warning btn-labeled">
+                    <i class="fas fa-sync"></i>Retry
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid app" :class="{ ready: !loading }">
+        <!-- Loading indicator -->
+        <div class="spinner text-center" v-if="loading">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-2">Loading workflows...</p>
+        </div>
+        
+        <!-- Error state -->
+        <div class="alert alert-danger" v-if="loadingFailed">
+            <h5><i class="fas fa-exclamation-triangle"></i> Error loading workflows</h5>
+            <p>There was a problem connecting to the server. Please check your connection or try again later.</p>
+            <button v-on:click.prevent="retry" class="btn btn-warning">
+                <i class="fas fa-sync"></i> Retry
+            </button>
+        </div>
+        
+        <!-- Empty state -->
+        <div class="empty-info" v-if="!loading && !loadingFailed && items.length === 0">
+            <h5 class="mt-4">No workflows available</h5>
+            <p>Click the "Add Workflow" button to create your first workflow.</p>
+        </div>
+        
+        <!-- Two-column layout -->
+        <div class="row workflow-container" v-if="!loading && !loadingFailed && items.length > 0">
+            <!-- Left sidebar with workflow list -->
+            <div class="col-md-4 workflow-sidebar">
+                <div class="workflow-search"> <!-- Removed mb-3 -->
+                    <input type="text" class="form-control" placeholder="Search workflows..." v-model="searchTerm">
+                </div>
+                <div class="workflow-list">
+                    <div v-for="workflow in filteredItems" 
+                         class="workflow-item" 
+                         :class="{ 'active': selectedWorkflow && selectedWorkflow.id === workflow.id, 'workflow-item-enabled': workflow.isEnabled }"
+                         v-on:click="selectWorkflow(workflow)">
+                        <div class="workflow-item-avatar">
+                            <i class="fas fa-project-diagram"></i>
+                            <i v-if="workflow.isEnabled && workflow.isDefault" class="fas fa-star workflow-status-icon default" title="Default Enabled Workflow"></i>
+                            <i v-else-if="workflow.isEnabled" class="fas fa-check workflow-status-icon enabled" title="Enabled Workflow"></i>
+                            <i v-else class="fas fa-pause workflow-status-icon disabled" title="Disabled Workflow"></i>
+                        </div>
+                        <div class="workflow-item-content">
+                            <div class="workflow-item-header">
+                                <h5 class="workflow-title">{{ workflow.title }}</h5>
+                                <small class="workflow-date">{{ formatDate(workflow.lastModified) }}</small>
+                            </div>
+                            <p class="workflow-excerpt">{{ truncateDescription(workflow.description, 60) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right panel with workflow details -->
+            <div class="col-md-8 workflow-details">
+                <div v-if="selectedWorkflow" class="workflow-detail-content">
+                    <div class="workflow-header">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="mb-0 d-flex align-items-bottom">
+                                <span v-if="selectedWorkflow.isEnabled && selectedWorkflow.isDefault" class="badge badge-success workflow-title-badge mr-2" title="Default Enabled Workflow"><i class="fas fa-star"></i> Default</span>
+                                <span v-else-if="selectedWorkflow.isEnabled" class="badge badge-success workflow-title-badge mr-2" title="Enabled Workflow"><i class="fas fa-check-circle"></i> Enabled</span>
+                                <span v-else class="badge badge-secondary workflow-title-badge mr-2" title="Disabled Workflow"><i class="fas fa-times-circle"></i> Disabled</span>
+                                {{ selectedWorkflow.title }}
+                            </h3>
+                            <div class="workflow-actions">
+                                <a :href="piranha.baseUrl + 'manager/workflow/edit/' + selectedWorkflow.id" class="btn btn-sm btn-primary mr-2">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <!-- Enable button: Only show if the workflow is NOT currently enabled -->
+                                <button v-if="!selectedWorkflow.isEnabled" v-on:click.prevent="toggleEnabled(selectedWorkflow)" class="btn btn-sm btn-success mr-2">
+                                    <i class="fas fa-check-circle"></i> Enable
+                                </button>
+                                <!-- Delete button: Only show if the workflow is NOT currently enabled or default -->
+                                <a v-if="!selectedWorkflow.isEnabled && !selectedWorkflow.isDefault" v-on:click.prevent="remove(selectedWorkflow.id)" class="btn btn-sm btn-danger text-white">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="workflow-metadata mb-4">
+                        <span class="badge badge-info mr-2">Created: {{ formatDate(selectedWorkflow.created) }}</span>
+                        <span class="badge badge-secondary">Modified: {{ formatDate(selectedWorkflow.lastModified) }}</span>
+                    </div>
+                    
+                    <div class="workflow-description card mb-4">
+                        <div class="card-body">
+                            <h5>Description</h5>
+                            <p>{{ selectedWorkflow.description || 'No description available.' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Workflow Stages Graph (GoJS) -->
+                    <div v-if="selectedWorkflow && selectedWorkflow.stages && selectedWorkflow.stages.length > 0" class="workflow-stages-graph-container card">
+                        <div class="card-body">
+                            <h5 class="mb-3">Workflow Stages</h5>
+                            <div ref="goJsDiagramDiv" class="gojs-diagram-container">
+                                <!-- GoJS Diagram will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Placeholder when no workflow is selected -->
+                <div v-else class="workflow-placeholder text-center">
+                    <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
+                    <h4>Select a workflow</h4>
+                    <p class="text-muted">Choose a workflow from the list to view its details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Workflow Modal -->
+    <div class="modal fade" id="workflowModal" tabindex="-1" role="dialog" aria-labelledby="workflowModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="workflowModalLabel">@Localizer.Workflow["Add New Workflow"]</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="newWorkflowTitle">@Localizer.Workflow["Title"]</label>
+                        <input type="text" class="form-control" id="newWorkflowTitle" v-model="newWorkflowTitle" placeholder="@Localizer.Workflow["Enter workflow title"]">
+                    </div>
+                    <div class="form-group">
+                        <label for="newWorkflowDescription">@Localizer.General["Description"]</label>
+                        <textarea class="form-control" id="newWorkflowDescription" v-model="newWorkflowDescription" rows="3" placeholder="@Localizer.Workflow["Enter optional description"]"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer.General["Close"]</button>
+                    <button type="button" class="btn btn-primary" v-on:click.prevent="createWorkflow">@Localizer.Workflow["Create Workflow"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
